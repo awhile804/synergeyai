@@ -1147,7 +1147,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h2>Add New User Story</h2>
-                <button class="modal-close" onclick="closeAddStoryModal()">&times;</button>
+                <button class="modal-close" aria-label="Close Add Story modal" onclick="closeAddStoryModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1212,7 +1212,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h2>Edit User Story</h2>
-                <button class="modal-close" onclick="closeEditStoryModal()">&times;</button>
+                <button class="modal-close" aria-label="Close Edit Story modal" onclick="closeEditStoryModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editStoryId">
@@ -1278,7 +1278,7 @@
         <div class="modal" style="max-width: 650px;">
             <div class="modal-header">
                 <h2>⚙️ Project Settings</h2>
-                <button class="modal-close" onclick="closeProjectSettingsModal()">&times;</button>
+                <button class="modal-close" aria-label="Close Project Settings modal" onclick="closeProjectSettingsModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="settingsProjectName" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--bg-hover);">
@@ -1736,10 +1736,10 @@
                         <td><span class="effort-badge">${story.Effort_Required || '-'}</span></td>
                         <td>
                             <div class="action-buttons">
-                                <button class="action-btn edit" onclick="openEditStoryModal('${story.Story_ID}')" title="Edit">✎</button>
-                                <button class="action-btn complete" onclick="markStoryComplete('${story.Story_ID}')" title="Mark Complete" ${isCompleted ? 'disabled' : ''}>✓</button>
-                                <button class="action-btn delete" onclick="deleteStory('${story.Story_ID}')" title="Delete">✕</button>
-                                <button class="action-btn details" onclick="toggleExpand(${index})">Details</button>
+                                <button class="action-btn edit" aria-label="Edit story" onclick="openEditStoryModal('${story.Story_ID}')" title="Edit">✎</button>
+                                <button class="action-btn complete" aria-label="Complete story" onclick="markStoryComplete('${story.Story_ID}')" title="Mark Complete" ${isCompleted ? 'disabled' : ''}>✓</button>
+                                <button class="action-btn delete" aria-label="Delete story" onclick="deleteStory('${story.Story_ID}')" title="Delete">✕</button>
+                                <button class="action-btn details" id="details-btn-${index}" aria-expanded="false" aria-controls="expanded-${index}" onclick="toggleExpand(${index})">Details</button>
                             </div>
                         </td>
                     </tr>
@@ -1875,9 +1875,18 @@
             document.querySelectorAll('.expanded-content').forEach(el => el.classList.remove('show'));
             document.querySelectorAll('.stories-table tr').forEach(el => el.classList.remove('expanded'));
             
+            // Reset aria-expanded for all details buttons
+            document.querySelectorAll('.action-btn.details').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
+
             if (!isShowing) {
                 expandedRow.classList.add('show');
                 mainRow.classList.add('expanded');
+
+                // Update aria-expanded for current button
+                const detailsBtn = document.getElementById(`details-btn-${index}`);
+                if (detailsBtn) {
+                    detailsBtn.setAttribute('aria-expanded', 'true');
+                }
             }
         }
 
