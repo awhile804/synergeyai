@@ -1,0 +1,3 @@
+## 2025-03-04 - [ARIA labels for icon-only buttons]
+**Learning:** Found several icon-only buttons across multiple pages (`index.html`, `project-builder.html`, `sprint-planner.html`, `transcript-analyzer.html`) lacking `aria-label` attributes. Screen reader users would be completely unaware of their functions (e.g. close, remove row, edit, delete, approve).
+**Action:** When adding new components like modals, table actions, or dynamically generated buttons with icons only (e.g. times sign, checkmark, pencil), explicitly enforce the inclusion of `aria-label` attributes describing the action to provide equal access for screen reader users.
