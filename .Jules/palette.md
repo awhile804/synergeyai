@@ -1,0 +1,3 @@
+## 2024-05-24 - Explicit UI state restoration for CSS-hidden modals
+**Learning:** Architecture constraint: Modals in `index.html` are hidden via CSS (`display: none`) rather than removed from the DOM. Consequently, UI states (e.g., disabled buttons, injected `<span class="ai-loading"></span>` spinners, or changed button text) persist indefinitely if the modal is closed without restoring the original state.
+**Action:** When adding async loading indicators to submit buttons inside these modals, *always* use a `finally` block to reliably restore the button's original text and enable it (`disabled = false`), ensuring the button doesn't remain "stuck" in a loading state the next time the modal is opened.
