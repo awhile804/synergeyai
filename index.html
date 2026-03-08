@@ -1147,7 +1147,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h2>Add New User Story</h2>
-                <button class="modal-close" onclick="closeAddStoryModal()">&times;</button>
+                <button class="modal-close" aria-label="Close" onclick="closeAddStoryModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1202,7 +1202,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeAddStoryModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveNewStory()">Add User Story</button>
+                <button id="saveNewStoryBtn" class="btn btn-save" onclick="saveNewStory()">Add User Story</button>
             </div>
         </div>
     </div>
@@ -1212,7 +1212,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h2>Edit User Story</h2>
-                <button class="modal-close" onclick="closeEditStoryModal()">&times;</button>
+                <button class="modal-close" aria-label="Close" onclick="closeEditStoryModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editStoryId">
@@ -1268,7 +1268,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeEditStoryModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveEditedStory()">Save Changes</button>
+                <button id="saveEditStoryBtn" class="btn btn-save" onclick="saveEditedStory()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -1278,7 +1278,7 @@
         <div class="modal" style="max-width: 650px;">
             <div class="modal-header">
                 <h2>⚙️ Project Settings</h2>
-                <button class="modal-close" onclick="closeProjectSettingsModal()">&times;</button>
+                <button class="modal-close" aria-label="Close" onclick="closeProjectSettingsModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="settingsProjectName" style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--bg-hover);">
@@ -1338,7 +1338,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeProjectSettingsModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveProjectSettings()">Save Settings</button>
+                <button id="saveSettingsBtn" class="btn btn-save" onclick="saveProjectSettings()">Save Settings</button>
             </div>
         </div>
     </div>
@@ -1736,10 +1736,10 @@
                         <td><span class="effort-badge">${story.Effort_Required || '-'}</span></td>
                         <td>
                             <div class="action-buttons">
-                                <button class="action-btn edit" onclick="openEditStoryModal('${story.Story_ID}')" title="Edit">✎</button>
-                                <button class="action-btn complete" onclick="markStoryComplete('${story.Story_ID}')" title="Mark Complete" ${isCompleted ? 'disabled' : ''}>✓</button>
-                                <button class="action-btn delete" onclick="deleteStory('${story.Story_ID}')" title="Delete">✕</button>
-                                <button class="action-btn details" onclick="toggleExpand(${index})">Details</button>
+                                <button class="action-btn edit" aria-label="Edit story" onclick="openEditStoryModal('${story.Story_ID}')" title="Edit">✎</button>
+                                <button class="action-btn complete" aria-label="Complete story" onclick="markStoryComplete('${story.Story_ID}')" title="Mark Complete" ${isCompleted ? 'disabled' : ''}>✓</button>
+                                <button class="action-btn delete" aria-label="Delete story" onclick="deleteStory('${story.Story_ID}')" title="Delete">✕</button>
+                                <button class="action-btn details" aria-label="Show details" onclick="toggleExpand(${index})">Details</button>
                             </div>
                         </td>
                     </tr>
@@ -1970,6 +1970,12 @@
                 return;
             }
             
+            const saveBtn = document.getElementById('saveNewStoryBtn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="ai-loading" style="border-color: rgba(0,0,0,0.2); border-top-color: var(--primary);"></span> Adding...';
+            }
+
             try {
                 // Get current stories to generate new ID
                 const doc = await db.collection('projects').doc(project).get();
@@ -2014,6 +2020,11 @@
             } catch (error) {
                 console.error('Error saving story:', error);
                 alert('Error saving user story: ' + error.message);
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = 'Add User Story';
+                }
             }
         }
         
@@ -2107,6 +2118,12 @@
                 return;
             }
             
+            const saveBtn = document.getElementById('saveEditStoryBtn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="ai-loading" style="border-color: rgba(0,0,0,0.2); border-top-color: var(--primary);"></span> Saving...';
+            }
+
             try {
                 // Find and update the story
                 const storyIndex = userStories.findIndex(s => s.Story_ID === storyId);
@@ -2143,6 +2160,11 @@
             } catch (error) {
                 console.error('Error saving story:', error);
                 alert('Error saving user story: ' + error.message);
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = 'Save Changes';
+                }
             }
         }
         
@@ -2324,6 +2346,12 @@
                 localStorage.setItem('openai_api_key', settings.openaiKey);
             }
             
+            const saveBtn = document.getElementById('saveSettingsBtn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="ai-loading" style="border-color: rgba(0,0,0,0.2); border-top-color: var(--primary);"></span> Saving...';
+            }
+
             try {
                 await db.collection('projects').doc(project).update({
                     settings: settings,
@@ -2336,6 +2364,11 @@
             } catch (error) {
                 console.error('Error saving settings:', error);
                 alert('Error saving settings: ' + error.message);
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = 'Save Settings';
+                }
             }
         }
         
