@@ -1,0 +1,1 @@
+## 2024-05-15 - Icon-only buttons accessibility\n**Learning:** Icon-only buttons (like .modal-close or .action-btn in tables) often lack descriptive context for screen reader users when they only contain symbols like 'x', '✎', or '✕'.\n**Action:** Always add descriptive `aria-label` attributes to icon-only buttons to convey their action to assistive technologies.
