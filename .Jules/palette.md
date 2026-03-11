@@ -1,0 +1,3 @@
+## 2024-03-11 - Explicitly Resetting UI States in CSS-Hidden Modals
+**Learning:** Architecture constraint: Modals in `index.html` are hidden via CSS (`display: none`) rather than being removed from the DOM. Consequently, UI states such as disabled buttons or loading text persist when a modal is reopened.
+**Action:** Use a `finally` block to explicitly reset UI states (e.g., restoring original button text, re-enabling buttons) after an operation completes to avoid stale, unclickable buttons and incorrect states upon reopening the modal.
