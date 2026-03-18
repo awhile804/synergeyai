@@ -1608,7 +1608,7 @@
 
                 return `
                     <div class="detail-task-card" id="task-card-${globalIndex}">
-                        <div class="detail-task-header" onclick="toggleTaskExpand(${globalIndex})">
+                        <div class="detail-task-header" onclick="toggleTaskExpand(${globalIndex})" aria-expanded="false" aria-controls="task-body-${globalIndex}">
                             <div class="detail-task-status ${statusClass}"></div>
                             <div class="detail-task-info">
                                 <div class="detail-task-name">${escapeHtml(task.Description)}</div>
@@ -1662,16 +1662,21 @@
             const body = document.getElementById(`task-body-${index}`);
             const btn = document.getElementById(`expand-btn-${index}`);
             const card = document.getElementById(`task-card-${index}`);
+            const header = card.querySelector('.detail-task-header');
             const isExpanded = body.classList.contains('show');
 
             document.querySelectorAll('.detail-task-body.show').forEach(el => el.classList.remove('show'));
             document.querySelectorAll('.detail-task-card.expanded').forEach(el => el.classList.remove('expanded'));
             document.querySelectorAll('.detail-task-expand.expanded').forEach(el => el.classList.remove('expanded'));
+            document.querySelectorAll('.detail-task-header').forEach(el => el.setAttribute('aria-expanded', 'false'));
 
             if (!isExpanded) {
                 body.classList.add('show');
                 card.classList.add('expanded');
                 btn.classList.add('expanded');
+                if (header) header.setAttribute('aria-expanded', 'true');
+            } else {
+                if (header) header.setAttribute('aria-expanded', 'false');
             }
         }
 
