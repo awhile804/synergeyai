@@ -1507,7 +1507,7 @@ Only include categories that have items. If no items for a category, omit it ent
                 
                 html += `
                     <div class="category-section" data-category="${category}">
-                        <div class="category-header" onclick="toggleCategory('${category}')">
+                        <div class="category-header" onclick="toggleCategory('${category}')" aria-expanded="true" aria-controls="category-${category}">
                             <div class="category-title">
                                 <span>${catInfo.icon}</span>
                                 <h3>${catInfo.title}</h3>
@@ -1801,8 +1801,10 @@ Only include categories that have items. If no items for a category, omit it ent
             const header = content.previousElementSibling;
             const chevron = header.querySelector('.chevron');
             
+            const isExpanded = content.classList.contains('expanded');
             content.classList.toggle('expanded');
             chevron.classList.toggle('rotated');
+            header.setAttribute('aria-expanded', (!isExpanded).toString());
         }
         
         function approveCategory(category) {
