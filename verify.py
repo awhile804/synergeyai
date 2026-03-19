@@ -91,6 +91,23 @@ def verify():
         delete_btn = row.locator(".action-btn.delete")
         assert delete_btn.get_attribute("aria-label") == "Delete story US-001", "Delete button aria-label missing or incorrect"
 
+        # Verify that clicking a label focuses its associated input
+        # Test 1: Search input (visible by default)
+        search_label = page.locator("label[for='searchInput']")
+        search_label.click()
+        is_focused = page.evaluate("document.activeElement.id === 'searchInput'")
+        assert is_focused, "Clicking 'Search' label did not focus the 'searchInput' field"
+
+        # Test 2: Add Story Modal input (hidden initially)
+        # Open modal first
+        page.locator("#addStoryBtn").click()
+        page.wait_for_selector("#addStoryModal", state="visible")
+
+        story_text_label = page.locator("label[for='newStoryText']")
+        story_text_label.click()
+        is_focused = page.evaluate("document.activeElement.id === 'newStoryText'")
+        assert is_focused, "Clicking 'User Story *' label did not focus the 'newStoryText' field"
+
         print("All accessibility tests passed successfully!")
 
         browser.close()
