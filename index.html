@@ -1202,7 +1202,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeAddStoryModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveNewStory()">Add User Story</button>
+                <button class="btn btn-save" id="saveNewStoryBtn" onclick="saveNewStory()">Add User Story</button>
             </div>
         </div>
     </div>
@@ -1268,7 +1268,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeEditStoryModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveEditedStory()">Save Changes</button>
+                <button class="btn btn-save" id="saveEditStoryBtn" onclick="saveEditedStory()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -1338,7 +1338,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-cancel" onclick="closeProjectSettingsModal()">Cancel</button>
-                <button class="btn btn-save" onclick="saveProjectSettings()">Save Settings</button>
+                <button class="btn btn-save" id="saveSettingsBtn" onclick="saveProjectSettings()">Save Settings</button>
             </div>
         </div>
     </div>
@@ -1970,6 +1970,11 @@
                 return;
             }
             
+            const saveBtn = document.getElementById('saveNewStoryBtn');
+            const originalText = saveBtn.innerText;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="ai-loading" style="border-color: rgba(0,0,0,0.2); border-top-color: var(--primary);"></span> Saving...';
+
             try {
                 // Get current stories to generate new ID
                 const doc = await db.collection('projects').doc(project).get();
@@ -2014,6 +2019,9 @@
             } catch (error) {
                 console.error('Error saving story:', error);
                 alert('Error saving user story: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = originalText;
             }
         }
         
@@ -2107,6 +2115,11 @@
                 return;
             }
             
+            const saveBtn = document.getElementById('saveEditStoryBtn');
+            const originalText = saveBtn.innerText;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="ai-loading" style="border-color: rgba(0,0,0,0.2); border-top-color: var(--primary);"></span> Saving...';
+
             try {
                 // Find and update the story
                 const storyIndex = userStories.findIndex(s => s.Story_ID === storyId);
@@ -2143,6 +2156,9 @@
             } catch (error) {
                 console.error('Error saving story:', error);
                 alert('Error saving user story: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = originalText;
             }
         }
         
@@ -2324,6 +2340,11 @@
                 localStorage.setItem('openai_api_key', settings.openaiKey);
             }
             
+            const saveBtn = document.getElementById('saveSettingsBtn');
+            const originalText = saveBtn.innerText;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="ai-loading" style="border-color: rgba(0,0,0,0.2); border-top-color: var(--primary);"></span> Saving...';
+
             try {
                 await db.collection('projects').doc(project).update({
                     settings: settings,
@@ -2336,6 +2357,9 @@
             } catch (error) {
                 console.error('Error saving settings:', error);
                 alert('Error saving settings: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = originalText;
             }
         }
         
