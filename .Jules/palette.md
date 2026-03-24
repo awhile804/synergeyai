@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility states for toggleable content
+**Learning:** Components that toggle content visibility must communicate their current state and relationship to screen readers using `aria-expanded` and `aria-controls`. This is crucial for custom expandable rows or panels (like `Details` in table rows, task descriptions, and suggestion categories in this app).
+**Action:** Always add `aria-expanded="true/false"` and `aria-controls="content-id"` to the button or header acting as a toggle. When the header is a `div`, it needs `role="button"` and `tabindex="0"`. Ensure to toggle the `aria-expanded` value via JS when the content expands/collapses.
