@@ -1520,7 +1520,9 @@ Only include categories that have items. If no items for a category, omit it ent
                                 <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); rejectCategory('${category}')">
                                     ✗ Reject All
                                 </button>
-                                <span class="chevron">▼</span>
+                                <button class="btn btn-icon chevron-btn" style="background:none;border:none;padding:0.25rem;cursor:pointer;color:var(--text-muted);" aria-label="Toggle ${catInfo.title} category" aria-expanded="true" aria-controls="category-${category}" onclick="event.stopPropagation(); toggleCategory('${category}')">
+                                    <span class="chevron">▼</span>
+                                </button>
                             </div>
                         </div>
                         <div class="category-content expanded" id="category-${category}">
@@ -1799,10 +1801,14 @@ Only include categories that have items. If no items for a category, omit it ent
         function toggleCategory(category) {
             const content = document.getElementById(`category-${category}`);
             const header = content.previousElementSibling;
+            const chevronBtn = header.querySelector('.chevron-btn');
             const chevron = header.querySelector('.chevron');
             
-            content.classList.toggle('expanded');
+            const isExpanded = content.classList.toggle('expanded');
             chevron.classList.toggle('rotated');
+            if (chevronBtn) {
+                chevronBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+            }
         }
         
         function approveCategory(category) {
