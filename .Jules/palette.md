@@ -1,0 +1,3 @@
+## 2024-03-25 - Safe Click Targets for Toggle Elements
+**Learning:** Adding ARIA properties directly to wrapper `<div role="button">` elements causes WCAG violations if those elements contain actual `<button>` elements inside them (nested interactive controls).
+**Action:** Always maintain the structural semantic of interactive elements. Add `aria-expanded`/`aria-controls` to the specific `<button>`, and if a larger pointer-click area is needed, apply a standard `onclick` to the `<div>` wrapper while ensuring the inner `<button>`'s click event has `event.stopPropagation()` to prevent double-firing and confusing screen reader state changes.
