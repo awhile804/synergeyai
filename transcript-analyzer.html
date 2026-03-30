@@ -855,7 +855,7 @@
                 <div class="panel-header">
                     <h3>📝 Meeting Transcript</h3>
                     <div class="file-upload">
-                        <label>
+                        <label for="fileInput">
                             📁 Upload .txt/.vtt
                             <input type="file" id="fileInput" accept=".txt,.vtt" onchange="handleFileUpload(event)">
                         </label>
@@ -1621,21 +1621,21 @@ Only include categories that have items. If no items for a category, omit it ent
                     formFields = `
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Title</label>
+                                <label for="edit-${id}-title">Title</label>
                                 <input type="text" id="edit-${id}-title" value="${escapeHtml(data.title || '')}">
                             </div>
                             <div class="form-group">
-                                <label>Epic</label>
+                                <label for="edit-${id}-epic">Epic</label>
                                 <input type="text" id="edit-${id}-epic" value="${escapeHtml(data.epic || '')}">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>User Story</label>
+                            <label for="edit-${id}-user_story">User Story</label>
                             <textarea id="edit-${id}-user_story" rows="2">${escapeHtml(data.user_story || '')}</textarea>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Priority</label>
+                                <label for="edit-${id}-priority">Priority</label>
                                 <select id="edit-${id}-priority">
                                     <option value="High" ${data.priority === 'High' ? 'selected' : ''}>High</option>
                                     <option value="Medium" ${data.priority === 'Medium' ? 'selected' : ''}>Medium</option>
@@ -1643,7 +1643,7 @@ Only include categories that have items. If no items for a category, omit it ent
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Effort (points)</label>
+                                <label for="edit-${id}-effort">Effort (points)</label>
                                 <input type="number" id="edit-${id}-effort" value="${data.effort || 5}" min="1" max="21">
                             </div>
                         </div>
@@ -1653,25 +1653,25 @@ Only include categories that have items. If no items for a category, omit it ent
                     formFields = `
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Title</label>
+                                <label for="edit-${id}-title">Title</label>
                                 <input type="text" id="edit-${id}-title" value="${escapeHtml(data.title || '')}">
                             </div>
                             <div class="form-group">
-                                <label>Sprint</label>
+                                <label for="edit-${id}-sprint">Sprint</label>
                                 <input type="number" id="edit-${id}-sprint" value="${data.sprint || 1}" min="1">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Description</label>
+                            <label for="edit-${id}-description">Description</label>
                             <textarea id="edit-${id}-description" rows="2">${escapeHtml(data.description || '')}</textarea>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Estimated Hours</label>
+                                <label for="edit-${id}-estimated_hours">Estimated Hours</label>
                                 <input type="number" id="edit-${id}-estimated_hours" value="${data.estimated_hours || 8}" min="1">
                             </div>
                             <div class="form-group">
-                                <label>Priority</label>
+                                <label for="edit-${id}-priority">Priority</label>
                                 <select id="edit-${id}-priority">
                                     <option value="High" ${data.priority === 'High' ? 'selected' : ''}>High</option>
                                     <option value="Medium" ${data.priority === 'Medium' ? 'selected' : ''}>Medium</option>
@@ -1679,7 +1679,7 @@ Only include categories that have items. If no items for a category, omit it ent
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Assignee</label>
+                                <label for="edit-${id}-assignee">Assignee</label>
                                 <input type="text" id="edit-${id}-assignee" value="${escapeHtml(data.assignee || '')}">
                             </div>
                         </div>
@@ -1688,16 +1688,16 @@ Only include categories that have items. If no items for a category, omit it ent
                 case 'risks':
                     formFields = `
                         <div class="form-group">
-                            <label>Title</label>
+                            <label for="edit-${id}-title">Title</label>
                             <input type="text" id="edit-${id}-title" value="${escapeHtml(data.title || '')}">
                         </div>
                         <div class="form-group">
-                            <label>Description</label>
+                            <label for="edit-${id}-description">Description</label>
                             <textarea id="edit-${id}-description" rows="2">${escapeHtml(data.description || '')}</textarea>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Severity</label>
+                                <label for="edit-${id}-severity">Severity</label>
                                 <select id="edit-${id}-severity">
                                     <option value="High" ${data.severity === 'High' ? 'selected' : ''}>High</option>
                                     <option value="Medium" ${data.severity === 'Medium' ? 'selected' : ''}>Medium</option>
@@ -1706,7 +1706,7 @@ Only include categories that have items. If no items for a category, omit it ent
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Mitigation</label>
+                            <label for="edit-${id}-mitigation">Mitigation</label>
                             <textarea id="edit-${id}-mitigation" rows="2">${escapeHtml(data.mitigation || '')}</textarea>
                         </div>
                     `;
