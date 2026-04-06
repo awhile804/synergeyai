@@ -1,0 +1,3 @@
+## 2024-04-06 - Dynamic ARIA Attributes for Accordions
+**Learning:** For interactive UI elements that expand/collapse content (like the Details button in the user stories table), static `aria-controls` isn't enough. Screen readers need real-time state updates. Specifically, `aria-expanded` must be dynamically toggled via JavaScript to accurately reflect the visual state (`"true"` when content is visible, `"false"` when hidden).
+**Action:** When implementing or fixing accordion/expandable components, ensure JavaScript event handlers explicitly synchronize the `aria-expanded` attribute on the trigger button to match the target container's visibility state.
