@@ -1618,7 +1618,7 @@
                                     <span>${task.Status || 'Not Started'}</span>
                                 </div>
                             </div>
-                            <button class="detail-task-expand" id="expand-btn-${globalIndex}">▼</button>
+                            <button class="detail-task-expand" id="expand-btn-${globalIndex}" aria-expanded="false" aria-controls="task-body-${globalIndex}" aria-label="Toggle task details" onclick="event.stopPropagation(); toggleTaskExpand(${globalIndex})">▼</button>
                         </div>
                         <div class="detail-task-body" id="task-body-${globalIndex}">
                             <div class="detail-form-grid">
@@ -1666,12 +1666,18 @@
 
             document.querySelectorAll('.detail-task-body.show').forEach(el => el.classList.remove('show'));
             document.querySelectorAll('.detail-task-card.expanded').forEach(el => el.classList.remove('expanded'));
-            document.querySelectorAll('.detail-task-expand.expanded').forEach(el => el.classList.remove('expanded'));
+            document.querySelectorAll('.detail-task-expand.expanded').forEach(el => {
+                el.classList.remove('expanded');
+                el.setAttribute('aria-expanded', 'false');
+            });
 
             if (!isExpanded) {
                 body.classList.add('show');
                 card.classList.add('expanded');
                 btn.classList.add('expanded');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                btn.setAttribute('aria-expanded', 'false');
             }
         }
 

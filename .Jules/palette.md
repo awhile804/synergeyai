@@ -1,0 +1,3 @@
+## 2024-04-09 - Accessible Toggle Buttons
+**Learning:** When building custom expandable rows/tasks (e.g. accordion pattern), wrapper `div` or generic click targets often cause accessibility and keyboard focus issues. Proper native buttons with dynamic `aria-expanded` and explicit `aria-controls` linked to the content ID ensure screen reader support. Stopping event propagation via `event.stopPropagation()` on the button allows retaining a larger clickable area without double-triggering or focus bubbling issues.
+**Action:** Always implement expandable elements with an inner `<button>`, bind the `aria-expanded` state dynamically to the toggled CSS class, set `aria-controls` to match the target element `id`, and add `aria-label` to icon-only buttons.
