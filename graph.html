@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMI Dependency Intelligence Dashboard</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #161822;
+    --bg-tertiary: #1c1f2e;
+    --bg-card: #1e2235;
+    --border: #2a2e42;
+    --text-primary: #e2e4ec;
+    --text-secondary: #8b8fa3;
+    --text-muted: #5c6078;
+    --accent: #5b8dee;
+    --accent-hover: #7ba4f7;
+    --ws-technology: #3B82F6;
+    --ws-hr: #8B5CF6;
+    --ws-finance: #10B981;
+    --ws-legal: #F59E0B;
+    --ws-operations: #EF4444;
+    --ws-sales: #06B6D4;
+    --ws-supply: #F97316;
+    --ws-marketing: #EC4899;
+    --ws-security: #6366F1;
+    --ws-procurement: #F97316;
+    --st-complete: #22C55E;
+    --st-inprogress: #3B82F6;
+    --st-atrisk: #F59E0B;
+    --st-blocked: #EF4444;
+    --st-notstarted: #6B7280;
+    --st-deferred: #9CA3AF;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    height: 52px;
+    z-index: 100;
+  }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .header-title {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.3px;
+    color: var(--text-primary);
+  }
+  .header-subtitle {
+    font-size: 11px; color: var(--text-secondary); font-weight: 400;
+  }
+  .header-stats {
+    display: flex; gap: 20px; font-size: 11px; color: var(--text-secondary);
+  }
+  .header-stats .stat-value { color: var(--accent); font-weight: 600; }
+
+  /* Navigation Tabs */
+  .nav-tabs {
+    display: flex; background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 38px;
+  }
+  .nav-tab {
+    padding: 8px 16px; font-size: 12px; font-weight: 500;
+    color: var(--text-muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .nav-tab:hover { color: var(--text-secondary); }
+  .nav-tab.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+  }
+
+  /* Export buttons */
+  .export-btns { display:flex; gap:6px; }
+  .export-btn {
+    padding: 5px 12px; font-size: 11px; font-weight: 500;
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    border: 1px solid var(--border); border-radius: 4px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .export-btn:hover {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+
+  /* View Container */
+  .view-container {
+    height: calc(100vh - 90px);
+    position: relative;
+  }
+  .view { display:none; height:100%; position:relative; }
+  .view.active { display:flex; }
+
+  /* NETWORK VIEW */
+  #network-view {
+    flex-direction: column;
+  }
+  .network-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .network-toolbar select, .network-toolbar input {
+    background: var(--bg-tertiary); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 8px; font-size: 11px;
+    outline: none;
+  }
+  .network-toolbar select:focus, .network-toolbar input:focus {
+    border-color: var(--accent);
+  }
+  .network-toolbar label {
+    font-size: 11px; color: var(--text-secondary);
+    display:flex; align-items:center; gap:4px; cursor:pointer;
+  }
+  .network-toolbar input[type="checkbox"] {
+    accent-color: var(--accent);
+  }
+  .network-main {
+    flex: 1; display: flex; overflow: hidden;
+  }
+  .graph-container {
+    flex: 1; position: relative; overflow: hidden;
+  }
+  .graph-container svg {
+    width: 100%; height: 100%;
+  }
+
+  /* Detail Panel */
+  .detail-panel {
+    width: 320px; background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    overflow-y: auto; padding: 16px;
+    display: none; flex-shrink: 0;
+  }
+  .detail-panel.open { display: block; }
+  .detail-panel h3 {
+    font-size: 13px; font-weight: 600; margin-bottom: 12px;
+    color: var(--text-primary);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .detail-close {
+    cursor: pointer; color: var(--text-muted); font-size: 16px;
+    background: none; border: none;
+  }
+  .detail-close:hover { color: var(--text-primary); }
+  .detail-field {
+    margin-bottom: 8px;
+  }
+  .detail-field .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-muted); margin-bottom: 2px;
+  }
+  .detail-field .value {
+    font-size: 12px; color: var(--text-primary);
+  }
+  .detail-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 600;
+  }
+  .detail-section {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .detail-section h4 {
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .dep-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 0; font-size: 11px; color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .dep-item:hover { color: var(--accent); }
+  .dep-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Legend */
+  .legend-bar {
+    display: flex; gap: 14px; align-items: center;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--text-secondary);
+  }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 2px;
+  }
+
+  /* MATRIX VIEW */
+  #matrix-view {
+    flex-direction: column; align-items: center;
+    justify-content: flex-start; padding: 30px;
+    overflow-y: auto;
+  }
+  .matrix-title {
+    font-size: 16px; font-weight: 600; margin-bottom: 4px;
+  }
+  .matrix-subtitle {
+    font-size: 12px; color: var(--text-secondary); margin-bottom: 24px;
+  }
+  .matrix-container {
+    position: relative;
+  }
+
+  /* RISK VIEW */
+  #risk-view {
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 20px;
+    gap: 16px;
+  }
+  .risk-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .risk-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .risk-card h3 {
+    font-size: 13px; font-weight: 600; margin-bottom: 12px;
+    color: var(--text-secondary); text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .risk-card.full { grid-column: 1 / -1; }
+
+  /* Blast radius table */
+  .blast-table {
+    width: 100%; font-size: 11px;
+    border-collapse: collapse;
+  }
+  .blast-table th {
+    text-align: left; padding: 6px 8px;
+    color: var(--text-muted); font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px; text-transform: uppercase;
+  }
+  .blast-table td {
+    padding: 6px 8px; border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .blast-table tr:hover td { color: var(--text-primary); background: var(--bg-tertiary); }
+
+  /* Workstream health cards */
+  .ws-health-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  }
+  .ws-health-card {
+    background: var(--bg-tertiary);
+    border-radius: 4px; padding: 12px;
+    border-left: 3px solid;
+  }
+  .ws-health-card .ws-name {
+    font-size: 12px; font-weight: 600; margin-bottom: 6px;
+  }
+  .ws-health-card .ws-stat {
+    font-size: 10px; color: var(--text-muted); margin-bottom: 2px;
+  }
+  .ws-health-card .ws-stat span {
+    color: var(--text-secondary); font-weight: 500;
+  }
+
+  /* Status mini bars */
+  .status-bar {
+    display: flex; height: 4px; border-radius: 2px; overflow: hidden;
+    margin-top: 8px; background: var(--bg-primary);
+  }
+  .status-bar .seg { height: 100%; }
+
+  /* SIMULATION VIEW */
+  #sim-view {
+    flex-direction: column;
+  }
+  .sim-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sim-toolbar button {
+    padding: 5px 14px; font-size: 11px; font-weight: 500;
+    border-radius: 4px; cursor: pointer; border: 1px solid;
+    transition: all 0.15s;
+  }
+  .sim-btn-reset {
+    background: var(--bg-tertiary); color: var(--text-secondary);
+    border-color: var(--border);
+  }
+  .sim-btn-reset:hover { background: var(--st-blocked); color: #fff; border-color: var(--st-blocked); }
+  .sim-main {
+    flex: 1; display: flex; overflow: hidden;
+  }
+  .sim-graph { flex: 1; position: relative; }
+  .sim-graph svg { width: 100%; height: 100%; }
+  .sim-results {
+    width: 340px; background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    overflow-y: auto; padding: 16px;
+  }
+  .sim-results h3 {
+    font-size: 13px; font-weight: 600; margin-bottom: 14px;
+    color: var(--text-secondary); text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .sim-impact-num {
+    font-size: 36px; font-weight: 700; color: var(--st-blocked);
+    line-height: 1;
+  }
+  .sim-impact-label {
+    font-size: 11px; color: var(--text-muted); margin-bottom: 14px;
+  }
+  .sim-impact-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; font-size: 12px; color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+  .sim-impact-row .val { font-weight: 600; }
+  .sim-delay-input {
+    display: flex; align-items: center; gap: 6px;
+    margin: 10px 0;
+  }
+  .sim-delay-input input {
+    width: 60px; background: var(--bg-tertiary); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 8px; font-size: 12px; text-align: center;
+  }
+  .sim-delay-input label { font-size: 11px; color: var(--text-muted); }
+  .sim-task-select {
+    background: var(--bg-tertiary); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px 8px; font-size: 11px; width: 260px;
+  }
+
+  /* GANTT VIEW */
+  #gantt-view {
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .gantt-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .gantt-container {
+    flex: 1; overflow: auto;
+    position: relative;
+  }
+  .gantt-container svg {
+    display: block;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 11px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 300px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .tt-title {
+    font-weight: 600; font-size: 12px; color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .tooltip .tt-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 2px 0;
+  }
+  .tooltip .tt-label { color: var(--text-muted); }
+  .tooltip .tt-val { color: var(--text-primary); font-weight: 500; }
+
+  /* Minimap */
+  .minimap {
+    position: absolute; bottom: 12px; right: 12px;
+    width: 180px; height: 120px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    opacity: 0.8;
+  }
+  .minimap:hover { opacity: 1; }
+  .minimap svg { width: 100%; height: 100%; }
+  .minimap .viewport-rect {
+    fill: none; stroke: var(--accent); stroke-width: 1.5;
+  }
+
+  /* Search */
+  .search-box {
+    position: relative;
+  }
+  .search-box input {
+    width: 200px;
+    padding: 4px 8px 4px 26px;
+    background: var(--bg-tertiary); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 4px;
+    font-size: 11px; outline: none;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box::before {
+    content: '⌕'; position: absolute; left: 8px; top: 50%;
+    transform: translateY(-50%); color: var(--text-muted); font-size: 12px;
+  }
+  .search-results {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto;
+    z-index: 200; display: none;
+  }
+  .search-results.open { display: block; }
+  .search-result-item {
+    padding: 6px 10px; font-size: 11px; cursor: pointer;
+    color: var(--text-secondary); border-bottom: 1px solid var(--border);
+  }
+  .search-result-item:hover {
+    background: var(--bg-tertiary); color: var(--text-primary);
+  }
+  .search-result-item .sr-id {
+    color: var(--accent); font-weight: 600; margin-right: 6px;
+  }
+
+  /* Context menu */
+  .context-menu {
+    position: fixed; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 0; z-index: 500; min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    display: none;
+  }
+  .context-menu.open { display: block; }
+  .context-menu-item {
+    padding: 6px 14px; font-size: 11px; cursor: pointer;
+    color: var(--text-secondary);
+  }
+  .context-menu-item:hover {
+    background: var(--bg-tertiary); color: var(--text-primary);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="header-title">PMI Dependency Intelligence</div>
+      <div class="header-subtitle">Post-Merger Integration Work Plan Analysis</div>
+    </div>
+    <div class="header-stats">
+      <div><span class="stat-value">176</span> milestones</div>
+      <div><span class="stat-value">110</span> dependencies</div>
+      <div><span class="stat-value">97</span> cross-functional</div>
+      <div><span class="stat-value">9</span> workstreams</div>
+    </div>
+  </div>
+  <div class="export-btns">
+    <button class="export-btn" onclick="exportPNG()">⤓ PNG</button>
+    <button class="export-btn" onclick="exportSVG()">⤓ SVG</button>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" data-view="network">Dependency Network</div>
+  <div class="nav-tab" data-view="matrix">Cross-Workstream Matrix</div>
+  <div class="nav-tab" data-view="risk">Risk Dashboard</div>
+  <div class="nav-tab" data-view="sim">Cascade Simulation</div>
+  <div class="nav-tab" data-view="gantt">Timeline</div>
+</div>
+
+<div class="view-container">
+
+  <!-- VIEW 1: NETWORK GRAPH -->
+  <div id="network-view" class="view active">
+    <div class="network-toolbar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search task ID or name...">
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <select id="filter-workstream"><option value="all">All Workstreams</option></select>
+      <select id="filter-status"><option value="all">All Statuses</option></select>
+      <select id="filter-priority"><option value="all">All Priorities</option></select>
+      <label><input type="checkbox" id="filter-crossfn" checked> Cross-functional only</label>
+      <label><input type="checkbox" id="color-by-status"> Color by status</label>
+      <div class="legend-bar" id="legend-bar"></div>
+    </div>
+    <div class="network-main">
+      <div class="graph-container" id="graph-container">
+        <svg id="chart-svg"></svg>
+        <div class="minimap" id="minimap"><svg></svg></div>
+      </div>
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+  </div>
+
+  <!-- VIEW 2: MATRIX -->
+  <div id="matrix-view" class="view">
+    <div class="matrix-title">Cross-Workstream Dependency Matrix</div>
+    <div class="matrix-subtitle">Cell intensity shows count of directed dependencies from row → column workstream</div>
+    <div class="matrix-container" id="matrix-container"></div>
+  </div>
+
+  <!-- VIEW 3: RISK DASHBOARD -->
+  <div id="risk-view" class="view">
+    <div class="risk-grid" id="risk-grid"></div>
+  </div>
+
+  <!-- VIEW 4: SIMULATION -->
+  <div id="sim-view" class="view">
+    <div class="sim-toolbar">
+      <span style="font-size:12px;font-weight:600;color:var(--text-secondary);">What-If Cascade Simulation</span>
+      <select class="sim-task-select" id="sim-task-select">
+        <option value="">Select a task to delay...</option>
+      </select>
+      <div class="sim-delay-input">
+        <label>Delay:</label>
+        <input type="number" id="sim-delay-days" value="10" min="1" max="365">
+        <label>days</label>
+      </div>
+      <button class="export-btn" onclick="runSimulation()" style="background:var(--accent);color:#fff;border-color:var(--accent);">Run Cascade</button>
+      <button class="sim-btn-reset" onclick="resetSimulation()">Reset</button>
+    </div>
+    <div class="sim-main">
+      <div class="sim-graph" id="sim-graph-container"><svg id="sim-svg"></svg></div>
+      <div class="sim-results" id="sim-results">
+        <h3>Cascade Impact</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Select a task and delay amount, then click "Run Cascade" to simulate the ripple effect through dependencies.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 5: GANTT -->
+  <div id="gantt-view" class="view">
+    <div class="gantt-toolbar">
+      <select id="gantt-group"><option value="function">Group by Workstream</option><option value="status">Group by Status</option><option value="priority">Group by Priority</option></select>
+      <label><input type="checkbox" id="gantt-deps" checked> Show dependencies</label>
+    </div>
+    <div class="gantt-container" id="gantt-container"></div>
+  </div>
+
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- CONTEXT MENU -->
+<div class="context-menu" id="context-menu">
+  <div class="context-menu-item" data-action="upstream">View Predecessors Only</div>
+  <div class="context-menu-item" data-action="downstream">View Successors Only</div>
+  <div class="context-menu-item" data-action="both">View Full Chain</div>
+  <div class="context-menu-item" data-action="simulate">Simulate Delay</div>
+  <div class="context-menu-item" data-action="reset">Reset Highlight</div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const nodesData = [{"milestone_id": "M-0001", "name": "Complete network infrastructure assessment", "function": "Technology", "owner": "M. Patel", "target_date": "2024-07-19", "date_display": "2024-07-19", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-792", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0002", "name": "Migrate email systems to unified platform", "function": "Technology", "owner": "J. Chen", "target_date": "TBD \u2014 post-close", "date_display": "TBD \u2014 post-close", "revised_date": "", "status": "Not Started", "priority": "Critical", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-TEC-323", "notes": "", "downstream_count": 2, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0003", "name": "Integrate Active Directory domains", "function": "Technology", "owner": "M. Patel", "target_date": "2025-01-03", "date_display": "2025-01-03", "revised_date": "", "status": "Not Started", "priority": "Low", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-TEC-559", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0004", "name": "Deploy unified VPN solution", "function": "Technology", "owner": "M. Patel", "target_date": "2024-03-04", "date_display": "2024-03-04", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-448", "notes": "", "downstream_count": 0, "upstream_count": 27, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0005", "name": "Complete ERP system evaluation", "function": "Technology", "owner": "R. Kumar", "target_date": "2024-06-19", "date_display": "2024-06-19", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-489", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0006", "name": "Migrate CRM to Salesforce instance", "function": "Technology", "owner": "J. Chen", "target_date": "2024-08-24", "date_display": "2024-08-24", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-227", "notes": "", "downstream_count": 0, "upstream_count": 5, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0007", "name": "Consolidate data centers \u2014 Phase 1", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-12-08", "date_display": "2024-12-08", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-691", "notes": "", "downstream_count": 2, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0008", "name": "Consolidate data centers \u2014 Phase 2", "function": "Technology", "owner": "M. Patel", "target_date": "2024-04-05", "date_display": "2024-04-05", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-975", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0009", "name": "Implement unified ITSM platform", "function": "Technology", "owner": "S. Williams", "target_date": "2024-04-21", "date_display": "2024-04-21", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-479", "notes": "", "downstream_count": 15, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0010", "name": "Deploy single sign-on (SSO) across all apps", "function": "Technology", "owner": "J. Chen", "target_date": "2025-02-23", "date_display": "2025-02-23", "revised_date": "", "status": "Deferred", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-646", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0011", "name": "Complete API gateway consolidation", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-09-11", "date_display": "2024-09-11", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-801", "notes": "", "downstream_count": 0, "upstream_count": 6, "in_degree": 2, "out_degree": 0, "total_degree": 2}, {"milestone_id": "M-0012", "name": "Migrate legacy applications to cloud", "function": "Technology", "owner": "J. Chen", "target_date": "2024-03-29", "date_display": "2024-03-29", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-TEC-374", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0013", "name": "Establish unified DevOps pipeline", "function": "Technology", "owner": "R. Kumar", "target_date": "2024-12-16", "date_display": "2024-12-16", "revised_date": "", "status": "At Risk", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-505", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0014", "name": "Complete telephony system integration", "function": "Technology", "owner": "M. Patel", "target_date": "2024-05-13", "date_display": "2024-05-13", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-864", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0015", "name": "Deploy endpoint management solution", "function": "Technology", "owner": "M. Patel", "target_date": "2024-09-21", "date_display": "2024-09-21", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-193", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0016", "name": "Establish unified monitoring & alerting", "function": "Technology", "owner": "S. Williams", "target_date": "2024-05-18", "date_display": "2024-05-18", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-TEC-494", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0017", "name": "Complete database consolidation plan", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-11-26", "date_display": "2024-11-26", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-796", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0018", "name": "Execute database migration \u2014 Wave 1", "function": "Technology", "owner": "R. Kumar", "target_date": "2024-11-30", "date_display": "2024-11-30", "revised_date": "", "status": "At Risk", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-400", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0019", "name": "Execute database migration \u2014 Wave 2", "function": "Technology", "owner": "M. Patel", "target_date": "2024-07-13", "date_display": "2024-07-13", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-991", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0020", "name": "Implement unified backup & DR solution", "function": "Technology", "owner": "M. Patel", "target_date": "2024-11-15", "date_display": "2024-11-15", "revised_date": "2024-12-23", "status": "Complete", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-TEC-880", "notes": "Date revised during speed dating session (original: 2024-11-15)", "downstream_count": 3, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0021", "name": "Complete IT org structure alignment", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-11-27", "date_display": "2024-11-27", "revised_date": "", "status": "Deferred", "priority": "Medium", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-TEC-119", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0022", "name": "Deploy unified collaboration tools", "function": "Technology", "owner": "R. Kumar", "target_date": "2024-09-02", "date_display": "2024-09-02", "revised_date": "", "status": "At Risk", "priority": "High", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-TEC-346", "notes": "", "downstream_count": 0, "upstream_count": 6, "in_degree": 2, "out_degree": 0, "total_degree": 2}, {"milestone_id": "M-0023", "name": "Integrate ticketing systems", "function": "Technology", "owner": "J. Chen", "target_date": "2024-04-13", "date_display": "2024-04-13", "revised_date": "", "status": "Complete", "priority": "High", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-TEC-231", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0024", "name": "Establish joint cybersecurity SOC", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-05-24", "date_display": "2024-05-24", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-TEC-316", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0025", "name": "Complete SaaS rationalization audit", "function": "Technology", "owner": "R. Kumar", "target_date": "2025-02-17", "date_display": "2025-02-17", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-TEC-787", "notes": "", "downstream_count": 4, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0026", "name": "Migrate file shares to SharePoint", "function": "Technology", "owner": "M. Patel", "target_date": "2024-11-20", "date_display": "2024-11-20", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-TEC-165", "notes": "", "downstream_count": 14, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0027", "name": "Implement network segmentation plan", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-12-27", "date_display": "2024-12-27", "revised_date": "", "status": "Complete", "priority": "High", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-TEC-172", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0028", "name": "Deploy unified print management", "function": "Technology", "owner": "R. Kumar", "target_date": "2024-04-04", "date_display": "2024-04-04", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-626", "notes": "", "downstream_count": 3, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0029", "name": "Complete IT vendor consolidation", "function": "Technology", "owner": "A. Johnson", "target_date": "2025-02-06", "date_display": "2025-02-06", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-690", "notes": "", "downstream_count": 0, "upstream_count": 17, "in_degree": 2, "out_degree": 0, "total_degree": 2}, {"milestone_id": "M-0030", "name": "Finalize Day 1 IT readiness checklist", "function": "Technology", "owner": "J. Chen", "target_date": "2024-09-25", "date_display": "2024-09-25", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-462", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0031", "name": "Establish integration testing environments", "function": "Technology", "owner": "J. Chen", "target_date": "Dependent on Workday", "date_display": "Dependent on Workday", "revised_date": "", "status": "Not Started", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-TEC-512", "notes": "", "downstream_count": 1, "upstream_count": 36, "in_degree": 3, "out_degree": 1, "total_degree": 4}, {"milestone_id": "M-0032", "name": "Complete regression testing \u2014 Wave 1", "function": "Technology", "owner": "M. Patel", "target_date": "2024-04-25", "date_display": "2024-04-25", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-TEC-243", "notes": "", "downstream_count": 13, "upstream_count": 2, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0033", "name": "Deploy unified asset management", "function": "Technology", "owner": "J. Chen", "target_date": "2024-07-06", "date_display": "2024-07-06", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-927", "notes": "", "downstream_count": 0, "upstream_count": 8, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0034", "name": "Complete IT policy harmonization", "function": "Technology", "owner": "A. Johnson", "target_date": "Subject to board approval", "date_display": "Subject to board approval", "revised_date": "", "status": "Not Started", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-195", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0035", "name": "Integrate development environments", "function": "Technology", "owner": "S. Williams", "target_date": "2024-05-25", "date_display": "2024-05-25", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-TEC-985", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0036", "name": "Establish data governance framework", "function": "Technology", "owner": "S. Williams", "target_date": "2024-09-11", "date_display": "2024-09-11", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-902", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0037", "name": "Deploy master data management solution", "function": "Technology", "owner": "A. Johnson", "target_date": "2025-02-20", "date_display": "2025-02-20", "revised_date": "", "status": "Deferred", "priority": "Low", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-TEC-258", "notes": "", "downstream_count": 2, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0038", "name": "Complete IT integration playbook", "function": "Technology", "owner": "A. Johnson", "target_date": "2024-06-20", "date_display": "2024-06-20", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-TEC-158", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0039", "name": "Complete regulatory filing with FTC", "function": "Legal", "owner": "H. Lee", "target_date": "2024-10-31", "date_display": "2024-10-31", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-620", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0040", "name": "Obtain Hart-Scott-Rodino clearance", "function": "Legal", "owner": "K. Thompson", "target_date": "2024-06-04", "date_display": "2024-06-04", "revised_date": "", "status": "Not Started", "priority": "High", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-LEG-222", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0041", "name": "File SEC Form 8-K notification", "function": "Legal", "owner": "H. Lee", "target_date": "2024-12-22", "date_display": "2024-12-22", "revised_date": "2025-02-08", "status": "Complete", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-LEG-529", "notes": "Date revised during speed dating session (original: 2024-12-22)", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0042", "name": "Complete IP portfolio audit", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-08-09", "date_display": "2024-08-09", "revised_date": "", "status": "Deferred", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-344", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0043", "name": "Transfer material contracts \u2014 Phase 1", "function": "Legal", "owner": "D. Miller", "target_date": "2024-05-07", "date_display": "2024-05-07", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-LEG-869", "notes": "", "downstream_count": 12, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0044", "name": "Transfer material contracts \u2014 Phase 2", "function": "Legal", "owner": "K. Thompson", "target_date": "2025-01-13", "date_display": "2025-01-13", "revised_date": "2025-03-13", "status": "Deferred", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-LEG-650", "notes": "Date revised during speed dating session (original: 2025-01-13)", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0045", "name": "Harmonize privacy policies (GDPR/CCPA)", "function": "Legal", "owner": "D. Miller", "target_date": "Deferred to Phase 2", "date_display": "Deferred to Phase 2", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-478", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0046", "name": "Consolidate outside counsel relationships", "function": "Legal", "owner": "D. Miller", "target_date": "2024-10-11", "date_display": "2024-10-11", "revised_date": "", "status": "At Risk", "priority": "Critical", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-LEG-406", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0047", "name": "Complete employment law compliance review", "function": "Legal", "owner": "K. Thompson", "target_date": "2024-05-08", "date_display": "2024-05-08", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-LEG-378", "notes": "", "downstream_count": 2, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0048", "name": "Establish unified legal hold process", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-06-16", "date_display": "2024-06-16", "revised_date": "2024-07-14", "status": "Complete", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-LEG-600", "notes": "Date revised during speed dating session (original: 2024-06-16)", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0049", "name": "Integrate contract management systems", "function": "Legal", "owner": "P. Anderson", "target_date": "2024-03-27", "date_display": "2024-03-27", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-103", "notes": "", "downstream_count": 1, "upstream_count": 15, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0050", "name": "Complete trademark/brand consolidation plan", "function": "Legal", "owner": "D. Miller", "target_date": "2024-05-06", "date_display": "2024-05-06", "revised_date": "", "status": "Complete", "priority": "High", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-LEG-664", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0051", "name": "Review & update all NDAs", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-04-27", "date_display": "2024-04-27", "revised_date": "", "status": "Not Started", "priority": "Critical", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-LEG-954", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0052", "name": "Harmonize standard terms & conditions", "function": "Legal", "owner": "D. Miller", "target_date": "2024-10-07", "date_display": "2024-10-07", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-915", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0053", "name": "Complete corporate governance alignment", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-08-31", "date_display": "2024-08-31", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-462", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0054", "name": "Establish unified compliance hotline", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-09-25", "date_display": "2024-09-25", "revised_date": "", "status": "Deferred", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-985", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0055", "name": "Review insurance coverage & consolidate", "function": "Legal", "owner": "K. Thompson", "target_date": "2024-05-30", "date_display": "2024-05-30", "revised_date": "", "status": "At Risk", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-901", "notes": "", "downstream_count": 1, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0056", "name": "Complete tax structure optimization plan", "function": "Legal", "owner": "K. Thompson", "target_date": "2024-07-06", "date_display": "2024-07-06", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-993", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0057", "name": "File state-level registrations", "function": "Legal", "owner": "P. Anderson", "target_date": "2024-10-27", "date_display": "2024-10-27", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-940", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0058", "name": "Establish entity rationalization roadmap", "function": "Legal", "owner": "P. Anderson", "target_date": "2024-03-13", "date_display": "2024-03-13", "revised_date": "2024-04-28", "status": "Complete", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-LEG-385", "notes": "Date revised during speed dating session (original: 2024-03-13)", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0059", "name": "Complete board governance alignment", "function": "Legal", "owner": "H. Lee", "target_date": "2024-07-21", "date_display": "2024-07-21", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-795", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0060", "name": "Harmonize anti-bribery/FCPA policies", "function": "Legal", "owner": "D. Miller", "target_date": "2024-03-15", "date_display": "2024-03-15", "revised_date": "", "status": "Not Started", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-694", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0061", "name": "Review all pending litigation matters", "function": "Legal", "owner": "D. Miller", "target_date": "2024-04-25", "date_display": "2024-04-25", "revised_date": "", "status": "Complete", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-546", "notes": "", "downstream_count": 0, "upstream_count": 25, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0062", "name": "Establish unified records retention policy", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-09-14", "date_display": "2024-09-14", "revised_date": "", "status": "At Risk", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-145", "notes": "", "downstream_count": 0, "upstream_count": 4, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0063", "name": "Complete data processing agreements review", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-12-01", "date_display": "2024-12-01", "revised_date": "", "status": "Complete", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-541", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0064", "name": "Transfer software licenses \u2014 Phase 1", "function": "Legal", "owner": "H. Lee", "target_date": "2025-02-04", "date_display": "2025-02-04", "revised_date": "", "status": "Deferred", "priority": "Medium", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-LEG-837", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0065", "name": "Transfer software licenses \u2014 Phase 2", "function": "Legal", "owner": "P. Anderson", "target_date": "2025-02-05", "date_display": "2025-02-05", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-667", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0066", "name": "Harmonize export control procedures", "function": "Legal", "owner": "P. Anderson", "target_date": "2024-10-02", "date_display": "2024-10-02", "revised_date": "", "status": "Complete", "priority": "High", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-LEG-682", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0067", "name": "Complete real estate lease assignments", "function": "Legal", "owner": "D. Miller", "target_date": "2024-12-06", "date_display": "2024-12-06", "revised_date": "", "status": "At Risk", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-540", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0068", "name": "Establish joint compliance training program", "function": "Legal", "owner": "P. Anderson", "target_date": "2024-08-12", "date_display": "2024-08-12", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-623", "notes": "", "downstream_count": 2, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0069", "name": "Review & update employee handbook (legal)", "function": "Legal", "owner": "D. Miller", "target_date": "2024-05-26", "date_display": "2024-05-26", "revised_date": "2024-07-14", "status": "Complete", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-LEG-195", "notes": "Date revised during speed dating session (original: 2024-05-26)", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0070", "name": "Complete environmental compliance audit", "function": "Legal", "owner": "L. Garcia", "target_date": "2025-02-08", "date_display": "2025-02-08", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-LEG-125", "notes": "", "downstream_count": 12, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0071", "name": "Harmonize dispute resolution procedures", "function": "Legal", "owner": "K. Thompson", "target_date": "2024-10-30", "date_display": "2024-10-30", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-LEG-744", "notes": "", "downstream_count": 7, "upstream_count": 27, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0072", "name": "Establish unified contract approval workflow", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-09-13", "date_display": "2024-09-13", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-LEG-771", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0073", "name": "Complete regulatory change impact assessment", "function": "Legal", "owner": "L. Garcia", "target_date": "2024-04-24", "date_display": "2024-04-24", "revised_date": "2024-06-19", "status": "At Risk", "priority": "High", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-LEG-923", "notes": "Date revised during speed dating session (original: 2024-04-24)", "downstream_count": 0, "upstream_count": 15, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0074", "name": "Complete workforce census & headcount", "function": "HR", "owner": "T. Martinez", "target_date": "2024-03-26", "date_display": "2024-03-26", "revised_date": "2024-05-01", "status": "Complete", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-HR-236", "notes": "Date revised during speed dating session (original: 2024-03-26)", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0075", "name": "Harmonize compensation bands", "function": "HR", "owner": "E. Wright", "target_date": "TBD", "date_display": "TBD", "revised_date": "", "status": "Not Started", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-950", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0076", "name": "Align benefits programs \u2014 Phase 1", "function": "HR", "owner": "E. Wright", "target_date": "2024-05-21", "date_display": "2024-05-21", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-HR-365", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0077", "name": "Align benefits programs \u2014 Phase 2", "function": "HR", "owner": "B. Harris", "target_date": "2024-07-20", "date_display": "2024-07-20", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-741", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0078", "name": "Migrate HRIS to Workday", "function": "HR", "owner": "C. Davis", "target_date": "2024-10-12", "date_display": "2024-10-12", "revised_date": "", "status": "Not Started", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-443", "notes": "", "downstream_count": 7, "upstream_count": 0, "in_degree": 0, "out_degree": 2, "total_degree": 2}, {"milestone_id": "M-0079", "name": "Complete organizational design (OD)", "function": "HR", "owner": "N. Robinson", "target_date": "2024-12-02", "date_display": "2024-12-02", "revised_date": "", "status": "Not Started", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-810", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0080", "name": "Implement unified payroll system", "function": "HR", "owner": "E. Wright", "target_date": "2024-06-18", "date_display": "2024-06-18", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-577", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0081", "name": "Establish retention program for key talent", "function": "HR", "owner": "B. Harris", "target_date": "2024-10-02", "date_display": "2024-10-02", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-HR-977", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0082", "name": "Complete RIF/severance planning", "function": "HR", "owner": "C. Davis", "target_date": "2024-10-31", "date_display": "2024-10-31", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-871", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0083", "name": "Deploy new performance management process", "function": "HR", "owner": "B. Harris", "target_date": "2024-10-01", "date_display": "2024-10-01", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-599", "notes": "", "downstream_count": 2, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0084", "name": "Harmonize PTO & leave policies", "function": "HR", "owner": "E. Wright", "target_date": "Deferred", "date_display": "Deferred", "revised_date": "", "status": "Deferred", "priority": "Medium", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-HR-841", "notes": "", "downstream_count": 15, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0085", "name": "Establish unified recruiting platform", "function": "HR", "owner": "B. Harris", "target_date": "2024-10-26", "date_display": "2024-10-26", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-706", "notes": "", "downstream_count": 0, "upstream_count": 14, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0086", "name": "Complete culture integration assessment", "function": "HR", "owner": "E. Wright", "target_date": "2025-01-24", "date_display": "2025-01-24", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-151", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0087", "name": "Deploy Day 1 employee communications", "function": "HR", "owner": "C. Davis", "target_date": "2024-08-15", "date_display": "2024-08-15", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-HR-384", "notes": "", "downstream_count": 4, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0088", "name": "Establish integration change management plan", "function": "HR", "owner": "E. Wright", "target_date": "2024-07-08", "date_display": "2024-07-08", "revised_date": "", "status": "At Risk", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-867", "notes": "", "downstream_count": 11, "upstream_count": 13, "in_degree": 3, "out_degree": 1, "total_degree": 4}, {"milestone_id": "M-0089", "name": "Complete job architecture mapping", "function": "HR", "owner": "T. Martinez", "target_date": "2024-08-27", "date_display": "2024-08-27", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-HR-872", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0090", "name": "Harmonize employee classification (FLSA)", "function": "HR", "owner": "T. Martinez", "target_date": "2024-07-05", "date_display": "2024-07-05", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-HR-229", "notes": "", "downstream_count": 12, "upstream_count": 3, "in_degree": 1, "out_degree": 2, "total_degree": 3}, {"milestone_id": "M-0091", "name": "Implement unified learning management (LMS)", "function": "HR", "owner": "C. Davis", "target_date": "2024-06-20", "date_display": "2024-06-20", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-HR-271", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0092", "name": "Migrate employee records to single system", "function": "HR", "owner": "N. Robinson", "target_date": "2024-04-28", "date_display": "2024-04-28", "revised_date": "", "status": "At Risk", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-210", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0093", "name": "Establish unified onboarding process", "function": "HR", "owner": "E. Wright", "target_date": "2024-12-20", "date_display": "2024-12-20", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-832", "notes": "", "downstream_count": 0, "upstream_count": 5, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0094", "name": "Complete benefits enrollment for Day 1", "function": "HR", "owner": "N. Robinson", "target_date": "2024-12-29", "date_display": "2024-12-29", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-970", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0095", "name": "Harmonize 401(k) / retirement plans", "function": "HR", "owner": "C. Davis", "target_date": "2024-12-15", "date_display": "2024-12-15", "revised_date": "2025-01-02", "status": "At Risk", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-HR-777", "notes": "Date revised during speed dating session (original: 2024-12-15)", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0096", "name": "Deploy employee self-service portal", "function": "HR", "owner": "E. Wright", "target_date": "2024-08-22", "date_display": "2024-08-22", "revised_date": "2024-09-30", "status": "Not Started", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-HR-208", "notes": "Date revised during speed dating session (original: 2024-08-22)", "downstream_count": 35, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0097", "name": "Complete workforce analytics dashboard", "function": "HR", "owner": "E. Wright", "target_date": "2024-10-22", "date_display": "2024-10-22", "revised_date": "", "status": "Complete", "priority": "High", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-HR-851", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0098", "name": "Establish DEI integration strategy", "function": "HR", "owner": "B. Harris", "target_date": "2025-01-10", "date_display": "2025-01-10", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-HR-576", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0099", "name": "Align employee recognition programs", "function": "HR", "owner": "N. Robinson", "target_date": "2024-07-16", "date_display": "2024-07-16", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-HR-385", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0100", "name": "Complete labor relations assessment", "function": "HR", "owner": "E. Wright", "target_date": "2024-10-24", "date_display": "2024-10-24", "revised_date": "", "status": "Complete", "priority": "Medium", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-HR-129", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0101", "name": "Harmonize time & attendance systems", "function": "HR", "owner": "C. Davis", "target_date": "2024-11-05", "date_display": "2024-11-05", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-386", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0102", "name": "Deploy unified HR service center", "function": "HR", "owner": "B. Harris", "target_date": "2024-07-20", "date_display": "2024-07-20", "revised_date": "", "status": "Complete", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-HR-187", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0103", "name": "Complete facilities assessment & consolidation plan", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-09-25", "date_display": "2024-09-25", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-OPE-558", "notes": "", "downstream_count": 28, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0104", "name": "Merge supply chain operations \u2014 Phase 1", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-06-22", "date_display": "2024-06-22", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-OPE-779", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 2, "out_degree": 0, "total_degree": 2}, {"milestone_id": "M-0105", "name": "Merge supply chain operations \u2014 Phase 2", "function": "Operations", "owner": "G. Clark", "target_date": "2024-11-27", "date_display": "2024-11-27", "revised_date": "2024-12-13", "status": "In Progress", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-OPE-819", "notes": "Date revised during speed dating session (original: 2024-11-27)", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0106", "name": "Consolidate warehouse & distribution network", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-06-27", "date_display": "2024-06-27", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-222", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0107", "name": "Establish unified quality management system", "function": "Operations", "owner": "F. Lewis", "target_date": "2025-02-17", "date_display": "2025-02-17", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-OPE-383", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0108", "name": "Integrate manufacturing execution systems", "function": "Operations", "owner": "W. Jackson", "target_date": "2024-11-24", "date_display": "2024-11-24", "revised_date": "", "status": "Complete", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-403", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0109", "name": "Complete fleet consolidation plan", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-05-31", "date_display": "2024-05-31", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-155", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0110", "name": "Establish unified vendor management process", "function": "Operations", "owner": "I. Rodriguez", "target_date": "2024-05-04", "date_display": "2024-05-04", "revised_date": "2024-06-14", "status": "Complete", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-OPE-993", "notes": "Date revised during speed dating session (original: 2024-05-04)", "downstream_count": 2, "upstream_count": 0, "in_degree": 0, "out_degree": 2, "total_degree": 2}, {"milestone_id": "M-0111", "name": "Deploy integrated inventory management", "function": "Operations", "owner": "I. Rodriguez", "target_date": "TBD \u2014 Q3", "date_display": "TBD \u2014 Q3", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-152", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0112", "name": "Complete operational KPI alignment", "function": "Operations", "owner": "W. Jackson", "target_date": "2024-10-31", "date_display": "2024-10-31", "revised_date": "", "status": "Not Started", "priority": "Low", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-OPE-175", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0113", "name": "Establish combined operations org chart", "function": "Operations", "owner": "G. Clark", "target_date": "2024-05-17", "date_display": "2024-05-17", "revised_date": "", "status": "Not Started", "priority": "Critical", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-OPE-354", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0114", "name": "Integrate customer service operations", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-09-30", "date_display": "2024-09-30", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-OPE-553", "notes": "", "downstream_count": 17, "upstream_count": 0, "in_degree": 0, "out_degree": 3, "total_degree": 3}, {"milestone_id": "M-0115", "name": "Consolidate call center platforms", "function": "Operations", "owner": "G. Clark", "target_date": "2024-12-27", "date_display": "2024-12-27", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-857", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0116", "name": "Complete office consolidation \u2014 Phase 1", "function": "Operations", "owner": "G. Clark", "target_date": "2024-06-15", "date_display": "2024-06-15", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-345", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0117", "name": "Complete office consolidation \u2014 Phase 2", "function": "Operations", "owner": "I. Rodriguez", "target_date": "2024-04-08", "date_display": "2024-04-08", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-581", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0118", "name": "Establish unified safety & EHS program", "function": "Operations", "owner": "G. Clark", "target_date": "2024-06-27", "date_display": "2024-06-27", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-OPE-803", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0119", "name": "Harmonize operational procedures & SOPs", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-07-14", "date_display": "2024-07-14", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Charter", "charter_ref": "Finance & Accounting Charter", "workplan_id": "WP-OPE-657", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0120", "name": "Deploy unified logistics management", "function": "Operations", "owner": "F. Lewis", "target_date": "2024-05-16", "date_display": "2024-05-16", "revised_date": "2024-05-31", "status": "Deferred", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-OPE-269", "notes": "Date revised during speed dating session (original: 2024-05-16)", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0121", "name": "Complete mailroom/shipping consolidation", "function": "Operations", "owner": "I. Rodriguez", "target_date": "2024-12-17", "date_display": "2024-12-17", "revised_date": "2025-01-29", "status": "Deferred", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-OPE-579", "notes": "Date revised during speed dating session (original: 2024-12-17)", "downstream_count": 2, "upstream_count": 6, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0122", "name": "Establish joint business continuity plan", "function": "Operations", "owner": "I. Rodriguez", "target_date": "2024-07-18", "date_display": "2024-07-18", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-182", "notes": "", "downstream_count": 31, "upstream_count": 0, "in_degree": 0, "out_degree": 2, "total_degree": 2}, {"milestone_id": "M-0123", "name": "Integrate order management systems", "function": "Operations", "owner": "W. Jackson", "target_date": "2024-08-13", "date_display": "2024-08-13", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-OPE-334", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0124", "name": "Complete operational synergy tracking setup", "function": "Operations", "owner": "W. Jackson", "target_date": "2024-12-20", "date_display": "2024-12-20", "revised_date": "2025-01-07", "status": "Complete", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-OPE-690", "notes": "Date revised during speed dating session (original: 2024-12-20)", "downstream_count": 2, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0125", "name": "Complete chart of accounts harmonization", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-05-29", "date_display": "2024-05-29", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-699", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0126", "name": "Consolidate general ledger", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-04-16", "date_display": "2024-04-16", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-428", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0127", "name": "Align financial close calendar", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-08-16", "date_display": "2024-08-16", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-778", "notes": "", "downstream_count": 15, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0128", "name": "Integrate accounts payable processes", "function": "Finance", "owner": "O. Taylor", "target_date": "Pending regulatory", "date_display": "Pending regulatory", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-358", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0129", "name": "Integrate accounts receivable processes", "function": "Finance", "owner": "O. Taylor", "target_date": "2024-09-23", "date_display": "2024-09-23", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-155", "notes": "", "downstream_count": 0, "upstream_count": 37, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0130", "name": "Establish combined budget & forecast model", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-09-02", "date_display": "2024-09-02", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-308", "notes": "", "downstream_count": 16, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0131", "name": "Complete transfer pricing alignment", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-05-07", "date_display": "2024-05-07", "revised_date": "", "status": "Deferred", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-129", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0132", "name": "Deploy unified expense management", "function": "Finance", "owner": "U. White", "target_date": "2024-07-01", "date_display": "2024-07-01", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Charter", "charter_ref": "Procurement & Supply Chain Charter", "workplan_id": "WP-FIN-665", "notes": "", "downstream_count": 18, "upstream_count": 5, "in_degree": 1, "out_degree": 2, "total_degree": 3}, {"milestone_id": "M-0133", "name": "Integrate treasury & cash management", "function": "Finance", "owner": "O. Taylor", "target_date": "2024-04-28", "date_display": "2024-04-28", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-610", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0134", "name": "Complete tax filing alignment", "function": "Finance", "owner": "V. Thomas", "target_date": "2025-02-25", "date_display": "2025-02-25", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-349", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0135", "name": "Establish combined financial reporting", "function": "Finance", "owner": "Q. Brown", "target_date": "2024-06-06", "date_display": "2024-06-06", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-382", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0136", "name": "Deploy consolidated billing system", "function": "Finance", "owner": "U. White", "target_date": "2024-08-22", "date_display": "2024-08-22", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-389", "notes": "", "downstream_count": 1, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0137", "name": "Harmonize revenue recognition policies", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-12-22", "date_display": "2024-12-22", "revised_date": "", "status": "Deferred", "priority": "High", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-FIN-557", "notes": "", "downstream_count": 7, "upstream_count": 27, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0138", "name": "Complete intercompany elimination setup", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-12-08", "date_display": "2024-12-08", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-FIN-429", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0139", "name": "Establish unified audit framework", "function": "Finance", "owner": "Q. Brown", "target_date": "2024-07-01", "date_display": "2024-07-01", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-144", "notes": "", "downstream_count": 18, "upstream_count": 8, "in_degree": 1, "out_degree": 2, "total_degree": 3}, {"milestone_id": "M-0140", "name": "Integrate fixed assets registers", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-10-29", "date_display": "2024-10-29", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-607", "notes": "", "downstream_count": 0, "upstream_count": 1, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0141", "name": "Complete purchase order policy alignment", "function": "Finance", "owner": "O. Taylor", "target_date": "2024-12-28", "date_display": "2024-12-28", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Charter", "charter_ref": "Technology Integration Charter", "workplan_id": "WP-FIN-202", "notes": "", "downstream_count": 10, "upstream_count": 14, "in_degree": 1, "out_degree": 3, "total_degree": 4}, {"milestone_id": "M-0142", "name": "Deploy combined management reporting", "function": "Finance", "owner": "Q. Brown", "target_date": "2024-05-13", "date_display": "2024-05-13", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-580", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0143", "name": "Establish synergy tracking & reporting", "function": "Finance", "owner": "O. Taylor", "target_date": "2025-01-14", "date_display": "2025-01-14", "revised_date": "", "status": "Complete", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-FIN-972", "notes": "", "downstream_count": 4, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0144", "name": "Complete Day 1 financial readiness", "function": "Finance", "owner": "V. Thomas", "target_date": "2024-08-10", "date_display": "2024-08-10", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-FIN-732", "notes": "", "downstream_count": 3, "upstream_count": 1, "in_degree": 1, "out_degree": 2, "total_degree": 3}, {"milestone_id": "M-0145", "name": "Complete supplier rationalization analysis", "function": "Procurement", "owner": "Y. Wilson", "target_date": "2025-01-18", "date_display": "2025-01-18", "revised_date": "", "status": "Complete", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-544", "notes": "", "downstream_count": 1, "upstream_count": 4, "in_degree": 2, "out_degree": 1, "total_degree": 3}, {"milestone_id": "M-0146", "name": "Establish unified procurement policy", "function": "Procurement", "owner": "X. Moore", "target_date": "2025-01-19", "date_display": "2025-01-19", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-270", "notes": "", "downstream_count": 15, "upstream_count": 7, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0147", "name": "Consolidate strategic supplier contracts", "function": "Procurement", "owner": "X. Moore", "target_date": "2024-03-15", "date_display": "2024-03-15", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-PRO-467", "notes": "", "downstream_count": 29, "upstream_count": 3, "in_degree": 2, "out_degree": 3, "total_degree": 5}, {"milestone_id": "M-0148", "name": "Integrate procurement systems (Ariba/Coupa)", "function": "Procurement", "owner": "Y. Wilson", "target_date": "2024-05-14", "date_display": "2024-05-14", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-PRO-274", "notes": "", "downstream_count": 10, "upstream_count": 4, "in_degree": 1, "out_degree": 3, "total_degree": 4}, {"milestone_id": "M-0149", "name": "Complete category strategy alignment", "function": "Procurement", "owner": "Z. Hall", "target_date": "2025-01-07", "date_display": "2025-01-07", "revised_date": "", "status": "At Risk", "priority": "High", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-PRO-609", "notes": "", "downstream_count": 19, "upstream_count": 7, "in_degree": 2, "out_degree": 1, "total_degree": 3}, {"milestone_id": "M-0150", "name": "Establish combined sourcing calendar", "function": "Procurement", "owner": "Z. Hall", "target_date": "2024-05-13", "date_display": "2024-05-13", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-570", "notes": "", "downstream_count": 0, "upstream_count": 28, "in_degree": 3, "out_degree": 0, "total_degree": 3}, {"milestone_id": "M-0151", "name": "Deploy unified supplier portal", "function": "Procurement", "owner": "Y. Wilson", "target_date": "2024-03-05", "date_display": "2024-03-05", "revised_date": "", "status": "At Risk", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-793", "notes": "", "downstream_count": 2, "upstream_count": 26, "in_degree": 2, "out_degree": 2, "total_degree": 4}, {"milestone_id": "M-0152", "name": "Complete indirect spend analysis", "function": "Procurement", "owner": "Y. Wilson", "target_date": "2024-04-07", "date_display": "2024-04-07", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-754", "notes": "", "downstream_count": 20, "upstream_count": 2, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0153", "name": "Harmonize purchase approval workflows", "function": "Procurement", "owner": "Y. Wilson", "target_date": "2025-02-17", "date_display": "2025-02-17", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-493", "notes": "", "downstream_count": 7, "upstream_count": 27, "in_degree": 2, "out_degree": 1, "total_degree": 3}, {"milestone_id": "M-0154", "name": "Establish supplier diversity program", "function": "Procurement", "owner": "Z. Hall", "target_date": "2024-04-24", "date_display": "2024-04-24", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-688", "notes": "", "downstream_count": 1, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0155", "name": "Complete procurement org alignment", "function": "Procurement", "owner": "Z. Hall", "target_date": "2025-02-22", "date_display": "2025-02-22", "revised_date": "", "status": "In Progress", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-PRO-381", "notes": "", "downstream_count": 1, "upstream_count": 3, "in_degree": 2, "out_degree": 1, "total_degree": 3}, {"milestone_id": "M-0156", "name": "Complete physical security assessment", "function": "Security", "owner": "A. Scott", "target_date": "2025-02-15", "date_display": "2025-02-15", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Charter", "charter_ref": "Legal & Compliance Charter", "workplan_id": "WP-SEC-952", "notes": "", "downstream_count": 1, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0157", "name": "Integrate badge/access control systems", "function": "Security", "owner": "A. Scott", "target_date": "2024-07-25", "date_display": "2024-07-25", "revised_date": "", "status": "At Risk", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-324", "notes": "", "downstream_count": 0, "upstream_count": 0, "in_degree": 0, "out_degree": 0, "total_degree": 0}, {"milestone_id": "M-0158", "name": "Establish unified security operations center", "function": "Security", "owner": "C. Green", "target_date": "2025-01-12", "date_display": "2025-01-12", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-743", "notes": "", "downstream_count": 5, "upstream_count": 1, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0159", "name": "Complete cybersecurity risk assessment", "function": "Security", "owner": "B. King", "target_date": "2025-01-16", "date_display": "2025-01-16", "revised_date": "", "status": "Complete", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-134", "notes": "", "downstream_count": 2, "upstream_count": 0, "in_degree": 0, "out_degree": 2, "total_degree": 2}, {"milestone_id": "M-0160", "name": "Deploy unified identity & access management", "function": "Security", "owner": "B. King", "target_date": "2024-05-07", "date_display": "2024-05-07", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-SEC-865", "notes": "", "downstream_count": 0, "upstream_count": 18, "in_degree": 2, "out_degree": 0, "total_degree": 2}, {"milestone_id": "M-0161", "name": "Establish combined incident response plan", "function": "Security", "owner": "C. Green", "target_date": "2024-06-11", "date_display": "2024-06-11", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-643", "notes": "", "downstream_count": 20, "upstream_count": 4, "in_degree": 1, "out_degree": 2, "total_degree": 3}, {"milestone_id": "M-0162", "name": "Complete security policy harmonization", "function": "Security", "owner": "B. King", "target_date": "2024-07-18", "date_display": "2024-07-18", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-925", "notes": "", "downstream_count": 0, "upstream_count": 2, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0163", "name": "Deploy unified DLP solution", "function": "Security", "owner": "B. King", "target_date": "2024-08-21", "date_display": "2024-08-21", "revised_date": "", "status": "At Risk", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-SEC-244", "notes": "", "downstream_count": 0, "upstream_count": 27, "in_degree": 1, "out_degree": 0, "total_degree": 1}, {"milestone_id": "M-0164", "name": "Establish joint security awareness training", "function": "Security", "owner": "C. Green", "target_date": "2024-06-24", "date_display": "2024-06-24", "revised_date": "", "status": "At Risk", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-966", "notes": "", "downstream_count": 3, "upstream_count": 0, "in_degree": 0, "out_degree": 1, "total_degree": 1}, {"milestone_id": "M-0165", "name": "Complete third-party security assessments", "function": "Security", "owner": "B. King", "target_date": "2024-09-04", "date_display": "2024-09-04", "revised_date": "", "status": "Not Started", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SEC-370", "notes": "", "downstream_count": 5, "upstream_count": 0, "in_degree": 0, "out_degree": 2, "total_degree": 2}, {"milestone_id": "M-0166", "name": "Complete sales territory re-alignment", "function": "Sales", "owner": "F. Nelson", "target_date": "2024-10-19", "date_display": "2024-10-19", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-SAL-698", "notes": "", "downstream_count": 12, "upstream_count": 10, "in_degree": 2, "out_degree": 1, "total_degree": 3}, {"milestone_id": "M-0167", "name": "Harmonize pricing & discount structures", "function": "Sales", "owner": "D. Adams", "target_date": "2025-01-21", "date_display": "2025-01-21", "revised_date": "", "status": "Deferred", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SAL-582", "notes": "", "downstream_count": 3, "upstream_count": 5, "in_degree": 1, "out_degree": 1, "total_degree": 2}, {"milestone_id": "M-0168", "name": "Integrate CRM data & customer records", "function": "Sales", "owner": "F. Nelson", "target_date": "2024-12-13", "date_display": "2024-12-13", "revised_date": "", "status": "In Progress", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SAL-763", "notes": "", "downstream_count": 27, "upstream_count": 1, "in_degree": 1, "out_degree": 5, "total_degree": 6}, {"milestone_id": "M-0169", "name": "Establish combined sales compensation plan", "function": "Sales", "owner": "E. Baker", "target_date": "2024-10-24", "date_display": "2024-10-24", "revised_date": "", "status": "Deferred", "priority": "Low", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SAL-219", "notes": "", "downstream_count": 34, "upstream_count": 1, "in_degree": 1, "out_degree": 4, "total_degree": 5}, {"milestone_id": "M-0170", "name": "Deploy unified quoting/CPQ tool", "function": "Sales", "owner": "E. Baker", "target_date": "2024-03-20", "date_display": "2024-03-20", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-SAL-199", "notes": "", "downstream_count": 16, "upstream_count": 6, "in_degree": 1, "out_degree": 2, "total_degree": 3}, {"milestone_id": "M-0171", "name": "Complete channel partner consolidation", "function": "Sales", "owner": "E. Baker", "target_date": "2024-12-01", "date_display": "2024-12-01", "revised_date": "", "status": "Not Started", "priority": "Medium", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SAL-786", "notes": "", "downstream_count": 1, "upstream_count": 7, "in_degree": 3, "out_degree": 1, "total_degree": 4}, {"milestone_id": "M-0172", "name": "Establish joint account management process", "function": "Sales", "owner": "E. Baker", "target_date": "2025-02-20", "date_display": "2025-02-20", "revised_date": "", "status": "Deferred", "priority": "High", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-SAL-524", "notes": "", "downstream_count": 0, "upstream_count": 8, "in_degree": 2, "out_degree": 0, "total_degree": 2}, {"milestone_id": "M-0173", "name": "Complete brand architecture strategy", "function": "Marketing", "owner": "H. Mitchell", "target_date": "2024-11-06", "date_display": "2024-11-06", "revised_date": "", "status": "Complete", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-MAR-806", "notes": "", "downstream_count": 3, "upstream_count": 3, "in_degree": 3, "out_degree": 2, "total_degree": 5}, {"milestone_id": "M-0174", "name": "Establish unified marketing tech stack", "function": "Marketing", "owner": "G. Carter", "target_date": "2024-10-14", "date_display": "2024-10-14", "revised_date": "", "status": "In Progress", "priority": "Medium", "source": "Speed Dating Notes", "charter_ref": "", "workplan_id": "WP-MAR-201", "notes": "", "downstream_count": 4, "upstream_count": 24, "in_degree": 4, "out_degree": 2, "total_degree": 6}, {"milestone_id": "M-0175", "name": "Deploy combined website/digital presence", "function": "Marketing", "owner": "H. Mitchell", "target_date": "2024-09-05", "date_display": "2024-09-05", "revised_date": "", "status": "In Progress", "priority": "Critical", "source": "Charter", "charter_ref": "HR & People Charter", "workplan_id": "WP-MAR-507", "notes": "", "downstream_count": 14, "upstream_count": 13, "in_degree": 4, "out_degree": 4, "total_degree": 8}, {"milestone_id": "M-0176", "name": "Complete go-to-market messaging alignment", "function": "Marketing", "owner": "H. Mitchell", "target_date": "2024-05-02", "date_display": "2024-05-02", "revised_date": "", "status": "Deferred", "priority": "Critical", "source": "Interdependency Tracker", "charter_ref": "", "workplan_id": "WP-MAR-778", "notes": "", "downstream_count": 7, "upstream_count": 27, "in_degree": 3, "out_degree": 3, "total_degree": 6}];
+const edgesData = [{"dep_id": "D-0001", "predecessor_id": "M-0154", "successor_id": "M-0162", "predecessor_func": "Procurement", "successor_func": "Security", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0002", "predecessor_id": "M-0161", "successor_id": "M-0011", "predecessor_func": "Security", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0003", "predecessor_id": "M-0159", "successor_id": "M-0066", "predecessor_func": "Security", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0004", "predecessor_id": "M-0161", "successor_id": "M-0132", "predecessor_func": "Security", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0005", "predecessor_id": "M-0174", "successor_id": "M-0061", "predecessor_func": "Marketing", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0006", "predecessor_id": "M-0055", "successor_id": "M-0080", "predecessor_func": "Legal", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0007", "predecessor_id": "M-0070", "successor_id": "M-0088", "predecessor_func": "Legal", "successor_func": "HR", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0008", "predecessor_id": "M-0147", "successor_id": "M-0176", "predecessor_func": "Procurement", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0009", "predecessor_id": "M-0143", "successor_id": "M-0173", "predecessor_func": "Finance", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0010", "predecessor_id": "M-0139", "successor_id": "M-0166", "predecessor_func": "Finance", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0011", "predecessor_id": "M-0071", "successor_id": "M-0176", "predecessor_func": "Legal", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0012", "predecessor_id": "M-0037", "successor_id": "M-0171", "predecessor_func": "Technology", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0013", "predecessor_id": "M-0166", "successor_id": "M-0088", "predecessor_func": "Sales", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0014", "predecessor_id": "M-0041", "successor_id": "M-0081", "predecessor_func": "Legal", "successor_func": "HR", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0015", "predecessor_id": "M-0175", "successor_id": "M-0085", "predecessor_func": "Marketing", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0016", "predecessor_id": "M-0155", "successor_id": "M-0022", "predecessor_func": "Procurement", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0017", "predecessor_id": "M-0175", "successor_id": "M-0160", "predecessor_func": "Marketing", "successor_func": "Security", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0018", "predecessor_id": "M-0083", "successor_id": "M-0155", "predecessor_func": "HR", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0019", "predecessor_id": "M-0063", "successor_id": "M-0135", "predecessor_func": "Legal", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0020", "predecessor_id": "M-0156", "successor_id": "M-0150", "predecessor_func": "Security", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0021", "predecessor_id": "M-0148", "successor_id": "M-0167", "predecessor_func": "Procurement", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0022", "predecessor_id": "M-0141", "successor_id": "M-0073", "predecessor_func": "Finance", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0023", "predecessor_id": "M-0078", "successor_id": "M-0158", "predecessor_func": "HR", "successor_func": "Security", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0024", "predecessor_id": "M-0169", "successor_id": "M-0024", "predecessor_func": "Sales", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0025", "predecessor_id": "M-0132", "successor_id": "M-0170", "predecessor_func": "Finance", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0026", "predecessor_id": "M-0124", "successor_id": "M-0154", "predecessor_func": "Operations", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0027", "predecessor_id": "M-0158", "successor_id": "M-0174", "predecessor_func": "Security", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0028", "predecessor_id": "M-0170", "successor_id": "M-0146", "predecessor_func": "Sales", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0029", "predecessor_id": "M-0088", "successor_id": "M-0141", "predecessor_func": "HR", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0030", "predecessor_id": "M-0114", "successor_id": "M-0166", "predecessor_func": "Operations", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0031", "predecessor_id": "M-0174", "successor_id": "M-0151", "predecessor_func": "Marketing", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0032", "predecessor_id": "M-0007", "successor_id": "M-0155", "predecessor_func": "Technology", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0033", "predecessor_id": "M-0031", "successor_id": "M-0129", "predecessor_func": "Technology", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0034", "predecessor_id": "M-0002", "successor_id": "M-0055", "predecessor_func": "Technology", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0035", "predecessor_id": "M-0173", "successor_id": "M-0160", "predecessor_func": "Marketing", "successor_func": "Security", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0036", "predecessor_id": "M-0027", "successor_id": "M-0123", "predecessor_func": "Technology", "successor_func": "Operations", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0037", "predecessor_id": "M-0171", "successor_id": "M-0033", "predecessor_func": "Sales", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0038", "predecessor_id": "M-0165", "successor_id": "M-0023", "predecessor_func": "Security", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0039", "predecessor_id": "M-0090", "successor_id": "M-0062", "predecessor_func": "HR", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0040", "predecessor_id": "M-0176", "successor_id": "M-0031", "predecessor_func": "Marketing", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0041", "predecessor_id": "M-0136", "successor_id": "M-0005", "predecessor_func": "Finance", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0042", "predecessor_id": "M-0047", "successor_id": "M-0145", "predecessor_func": "Legal", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0043", "predecessor_id": "M-0096", "successor_id": "M-0169", "predecessor_func": "HR", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0044", "predecessor_id": "M-0168", "successor_id": "M-0013", "predecessor_func": "Sales", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0045", "predecessor_id": "M-0153", "successor_id": "M-0137", "predecessor_func": "Procurement", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0046", "predecessor_id": "M-0114", "successor_id": "M-0126", "predecessor_func": "Operations", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0047", "predecessor_id": "M-0151", "successor_id": "M-0163", "predecessor_func": "Procurement", "successor_func": "Security", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0048", "predecessor_id": "M-0168", "successor_id": "M-0175", "predecessor_func": "Sales", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0049", "predecessor_id": "M-0164", "successor_id": "M-0083", "predecessor_func": "Security", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0050", "predecessor_id": "M-0149", "successor_id": "M-0139", "predecessor_func": "Procurement", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0051", "predecessor_id": "M-0169", "successor_id": "M-0145", "predecessor_func": "Sales", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0052", "predecessor_id": "M-0127", "successor_id": "M-0026", "predecessor_func": "Finance", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0053", "predecessor_id": "M-0078", "successor_id": "M-0029", "predecessor_func": "HR", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0054", "predecessor_id": "M-0114", "successor_id": "M-0151", "predecessor_func": "Operations", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0055", "predecessor_id": "M-0168", "successor_id": "M-0152", "predecessor_func": "Sales", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0056", "predecessor_id": "M-0176", "successor_id": "M-0150", "predecessor_func": "Marketing", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0057", "predecessor_id": "M-0032", "successor_id": "M-0090", "predecessor_func": "Technology", "successor_func": "HR", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0058", "predecessor_id": "M-0139", "successor_id": "M-0174", "predecessor_func": "Finance", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0059", "predecessor_id": "M-0043", "successor_id": "M-0088", "predecessor_func": "Legal", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0060", "predecessor_id": "M-0146", "successor_id": "M-0175", "predecessor_func": "Procurement", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0061", "predecessor_id": "M-0090", "successor_id": "M-0148", "predecessor_func": "HR", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0062", "predecessor_id": "M-0103", "successor_id": "M-0168", "predecessor_func": "Operations", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0063", "predecessor_id": "M-0076", "successor_id": "M-0058", "predecessor_func": "HR", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0064", "predecessor_id": "M-0165", "successor_id": "M-0173", "predecessor_func": "Security", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0065", "predecessor_id": "M-0068", "successor_id": "M-0171", "predecessor_func": "Legal", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0066", "predecessor_id": "M-0087", "successor_id": "M-0173", "predecessor_func": "HR", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0067", "predecessor_id": "M-0130", "successor_id": "M-0084", "predecessor_func": "Finance", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0068", "predecessor_id": "M-0133", "successor_id": "M-0051", "predecessor_func": "Finance", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0069", "predecessor_id": "M-0141", "successor_id": "M-0049", "predecessor_func": "Finance", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0070", "predecessor_id": "M-0145", "successor_id": "M-0006", "predecessor_func": "Procurement", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0071", "predecessor_id": "M-0122", "successor_id": "M-0156", "predecessor_func": "Operations", "successor_func": "Security", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0072", "predecessor_id": "M-0132", "successor_id": "M-0172", "predecessor_func": "Finance", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0073", "predecessor_id": "M-0049", "successor_id": "M-0029", "predecessor_func": "Legal", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0074", "predecessor_id": "M-0122", "successor_id": "M-0147", "predecessor_func": "Operations", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0075", "predecessor_id": "M-0147", "successor_id": "M-0161", "predecessor_func": "Procurement", "successor_func": "Security", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0076", "predecessor_id": "M-0168", "successor_id": "M-0067", "predecessor_func": "Sales", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0077", "predecessor_id": "M-0025", "successor_id": "M-0144", "predecessor_func": "Technology", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0078", "predecessor_id": "M-0148", "successor_id": "M-0174", "predecessor_func": "Procurement", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0079", "predecessor_id": "M-0169", "successor_id": "M-0125", "predecessor_func": "Sales", "successor_func": "Finance", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0080", "predecessor_id": "M-0167", "successor_id": "M-0121", "predecessor_func": "Sales", "successor_func": "Operations", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0081", "predecessor_id": "M-0144", "successor_id": "M-0172", "predecessor_func": "Finance", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0082", "predecessor_id": "M-0028", "successor_id": "M-0047", "predecessor_func": "Technology", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0083", "predecessor_id": "M-0151", "successor_id": "M-0004", "predecessor_func": "Procurement", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0084", "predecessor_id": "M-0137", "successor_id": "M-0071", "predecessor_func": "Finance", "successor_func": "Legal", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0085", "predecessor_id": "M-0045", "successor_id": "M-0086", "predecessor_func": "Legal", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0086", "predecessor_id": "M-0148", "successor_id": "M-0093", "predecessor_func": "Procurement", "successor_func": "HR", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0087", "predecessor_id": "M-0009", "successor_id": "M-0175", "predecessor_func": "Technology", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0088", "predecessor_id": "M-0084", "successor_id": "M-0175", "predecessor_func": "HR", "successor_func": "Marketing", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0089", "predecessor_id": "M-0141", "successor_id": "M-0153", "predecessor_func": "Finance", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0090", "predecessor_id": "M-0168", "successor_id": "M-0022", "predecessor_func": "Sales", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0091", "predecessor_id": "M-0144", "successor_id": "M-0031", "predecessor_func": "Finance", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0092", "predecessor_id": "M-0121", "successor_id": "M-0031", "predecessor_func": "Operations", "successor_func": "Technology", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Speed Dating Notes", "notes": ""}, {"dep_id": "D-0093", "predecessor_id": "M-0159", "successor_id": "M-0075", "predecessor_func": "Security", "successor_func": "HR", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0094", "predecessor_id": "M-0169", "successor_id": "M-0147", "predecessor_func": "Sales", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0095", "predecessor_id": "M-0173", "successor_id": "M-0171", "predecessor_func": "Marketing", "successor_func": "Sales", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Charter", "notes": ""}, {"dep_id": "D-0096", "predecessor_id": "M-0176", "successor_id": "M-0153", "predecessor_func": "Marketing", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0097", "predecessor_id": "M-0170", "successor_id": "M-0150", "predecessor_func": "Sales", "successor_func": "Procurement", "cross_functional": true, "dependency_type": "Finish-to-Start", "status": "At Risk", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0098", "predecessor_id": "M-0110", "successor_id": "M-0111", "predecessor_func": "Operations", "successor_func": "Operations", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Active", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0099", "predecessor_id": "M-0131", "successor_id": "M-0140", "predecessor_func": "Finance", "successor_func": "Finance", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0100", "predecessor_id": "M-0175", "successor_id": "M-0174", "predecessor_func": "Marketing", "successor_func": "Marketing", "cross_functional": false, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0101", "predecessor_id": "M-0147", "successor_id": "M-0149", "predecessor_func": "Procurement", "successor_func": "Procurement", "cross_functional": false, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0102", "predecessor_id": "M-0152", "successor_id": "M-0149", "predecessor_func": "Procurement", "successor_func": "Procurement", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0103", "predecessor_id": "M-0175", "successor_id": "M-0176", "predecessor_func": "Marketing", "successor_func": "Marketing", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0104", "predecessor_id": "M-0110", "successor_id": "M-0104", "predecessor_func": "Operations", "successor_func": "Operations", "cross_functional": false, "dependency_type": "Finish-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0105", "predecessor_id": "M-0065", "successor_id": "M-0060", "predecessor_func": "Legal", "successor_func": "Legal", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0106", "predecessor_id": "M-0036", "successor_id": "M-0011", "predecessor_func": "Technology", "successor_func": "Technology", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}, {"dep_id": "D-0107", "predecessor_id": "M-0112", "successor_id": "M-0113", "predecessor_func": "Operations", "successor_func": "Operations", "cross_functional": false, "dependency_type": "Start-to-Start", "status": "Active", "source": "Charter", "notes": ""}, {"dep_id": "D-0108", "predecessor_id": "M-0120", "successor_id": "M-0104", "predecessor_func": "Operations", "successor_func": "Operations", "cross_functional": false, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0109", "predecessor_id": "M-0026", "successor_id": "M-0032", "predecessor_func": "Technology", "successor_func": "Technology", "cross_functional": false, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Charter", "notes": ""}, {"dep_id": "D-0110", "predecessor_id": "M-0020", "successor_id": "M-0037", "predecessor_func": "Technology", "successor_func": "Technology", "cross_functional": false, "dependency_type": "Finish-to-Start", "status": "Resolved", "source": "Interdependency Tracker", "notes": ""}];
+const matrixData = {"Finance|Finance": 1, "Finance|HR": 1, "Finance|Legal": 4, "Finance|Marketing": 2, "Finance|Operations": 0, "Finance|Procurement": 1, "Finance|Sales": 4, "Finance|Security": 0, "Finance|Technology": 3, "HR|Finance": 1, "HR|HR": 0, "HR|Legal": 2, "HR|Marketing": 2, "HR|Operations": 0, "HR|Procurement": 2, "HR|Sales": 1, "HR|Security": 1, "HR|Technology": 1, "Legal|Finance": 1, "Legal|HR": 5, "Legal|Legal": 1, "Legal|Marketing": 1, "Legal|Operations": 0, "Legal|Procurement": 1, "Legal|Sales": 1, "Legal|Security": 0, "Legal|Technology": 1, "Marketing|Finance": 0, "Marketing|HR": 1, "Marketing|Legal": 1, "Marketing|Marketing": 2, "Marketing|Operations": 0, "Marketing|Procurement": 3, "Marketing|Sales": 1, "Marketing|Security": 2, "Marketing|Technology": 1, "Operations|Finance": 1, "Operations|HR": 0, "Operations|Legal": 0, "Operations|Marketing": 0, "Operations|Operations": 4, "Operations|Procurement": 3, "Operations|Sales": 2, "Operations|Security": 1, "Operations|Technology": 1, "Procurement|Finance": 2, "Procurement|HR": 1, "Procurement|Legal": 0, "Procurement|Marketing": 3, "Procurement|Operations": 0, "Procurement|Procurement": 2, "Procurement|Sales": 1, "Procurement|Security": 3, "Procurement|Technology": 3, "Sales|Finance": 1, "Sales|HR": 1, "Sales|Legal": 1, "Sales|Marketing": 1, "Sales|Operations": 1, "Sales|Procurement": 5, "Sales|Sales": 0, "Sales|Security": 0, "Sales|Technology": 4, "Security|Finance": 1, "Security|HR": 2, "Security|Legal": 1, "Security|Marketing": 2, "Security|Operations": 0, "Security|Procurement": 1, "Security|Sales": 0, "Security|Security": 0, "Security|Technology": 2, "Technology|Finance": 2, "Technology|HR": 1, "Technology|Legal": 2, "Technology|Marketing": 1, "Technology|Operations": 1, "Technology|Procurement": 1, "Technology|Sales": 1, "Technology|Security": 0, "Technology|Technology": 3};
+const functionsList = ["Finance", "HR", "Legal", "Marketing", "Operations", "Procurement", "Sales", "Security", "Technology"];
+
+// ===================== COLOR MAPS =====================
+const wsColors = {
+  'Technology': '#3B82F6', 'HR': '#8B5CF6', 'Finance': '#10B981',
+  'Legal': '#F59E0B', 'Operations': '#EF4444', 'Sales': '#06B6D4',
+  'Supply Chain': '#F97316', 'Marketing': '#EC4899', 'Security': '#6366F1',
+  'Procurement': '#F97316'
+};
+const statusColors = {
+  'Complete': '#22C55E', 'In Progress': '#3B82F6', 'At Risk': '#F59E0B',
+  'Blocked': '#EF4444', 'Not Started': '#6B7280', 'Deferred': '#9CA3AF'
+};
+const priorityOrder = {'Critical':0,'High':1,'Medium':2,'Low':3};
+
+// ===================== INDEX MAPS =====================
+const nodeMap = new Map();
+nodesData.forEach(n => nodeMap.set(n.milestone_id, n));
+
+const adjOut = new Map();
+const adjIn = new Map();
+edgesData.forEach(e => {
+  if (!adjOut.has(e.predecessor_id)) adjOut.set(e.predecessor_id, []);
+  adjOut.get(e.predecessor_id).push(e.successor_id);
+  if (!adjIn.has(e.successor_id)) adjIn.set(e.successor_id, []);
+  adjIn.get(e.successor_id).push(e.predecessor_id);
+});
+
+function getDownstream(id) {
+  const visited = new Set();
+  const q = [id];
+  while (q.length) {
+    const n = q.shift();
+    (adjOut.get(n) || []).forEach(s => {
+      if (!visited.has(s)) { visited.add(s); q.push(s); }
+    });
+  }
+  return visited;
+}
+function getUpstream(id) {
+  const visited = new Set();
+  const q = [id];
+  while (q.length) {
+    const n = q.shift();
+    (adjIn.get(n) || []).forEach(s => {
+      if (!visited.has(s)) { visited.add(s); q.push(s); }
+    });
+  }
+  return visited;
+}
+
+// ===================== TAB NAVIGATION =====================
+let currentView = 'network';
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const viewId = tab.dataset.view + '-view';
+    document.getElementById(viewId).classList.add('active');
+    currentView = tab.dataset.view;
+    if (currentView === 'matrix') renderMatrix();
+    if (currentView === 'risk') renderRiskDashboard();
+    if (currentView === 'sim') renderSimGraph();
+    if (currentView === 'gantt') renderGantt();
+  });
+});
+
+// ===================== TOOLTIP =====================
+const tooltip = document.getElementById('tooltip');
+function showTooltip(evt, html) {
+  tooltip.innerHTML = html;
+  tooltip.classList.add('visible');
+  let x = evt.clientX + 14, y = evt.clientY + 14;
+  if (x + 300 > window.innerWidth) x = evt.clientX - 310;
+  if (y + 200 > window.innerHeight) y = evt.clientY - 210;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// ===================== CONTEXT MENU =====================
+const contextMenu = document.getElementById('context-menu');
+let contextNodeId = null;
+document.addEventListener('click', () => contextMenu.classList.remove('open'));
+document.querySelectorAll('.context-menu-item').forEach(item => {
+  item.addEventListener('click', () => {
+    if (!contextNodeId) return;
+    const action = item.dataset.action;
+    if (action === 'upstream') highlightChain(contextNodeId, 'upstream');
+    else if (action === 'downstream') highlightChain(contextNodeId, 'downstream');
+    else if (action === 'both') highlightChain(contextNodeId, 'both');
+    else if (action === 'simulate') {
+      document.querySelector('.nav-tab[data-view="sim"]').click();
+      document.getElementById('sim-task-select').value = contextNodeId;
+    }
+    else if (action === 'reset') resetHighlight();
+    contextMenu.classList.remove('open');
+  });
+});
+
+// ===================== POPULATE FILTERS =====================
+const wsList = [...new Set(nodesData.map(n => n.function))].sort();
+const stList = [...new Set(nodesData.map(n => n.status))].sort();
+const prList = ['Critical','High','Medium','Low'];
+wsList.forEach(w => {
+  document.getElementById('filter-workstream').innerHTML +=
+    `<option value="${w}">${w}</option>`;
+});
+stList.forEach(s => {
+  document.getElementById('filter-status').innerHTML +=
+    `<option value="${s}">${s}</option>`;
+});
+prList.forEach(p => {
+  document.getElementById('filter-priority').innerHTML +=
+    `<option value="${p}">${p}</option>`;
+});
+
+// Populate sim task select sorted by downstream
+const sortedByBlast = [...nodesData].sort((a,b) => b.downstream_count - a.downstream_count);
+sortedByBlast.forEach(n => {
+  document.getElementById('sim-task-select').innerHTML +=
+    `<option value="${n.milestone_id}">${n.milestone_id} — ${n.name.substring(0,50)} (↓${n.downstream_count})</option>`;
+});
+
+// Legend
+const legendBar = document.getElementById('legend-bar');
+wsList.forEach(w => {
+  legendBar.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${wsColors[w] || '#888'}"></div>${w}</div>`;
+});
+
+// ===================== NETWORK GRAPH =====================
+let simulation, svgG, linkG, nodeG, labelG;
+let currentNodes, currentEdges;
+let selectedNodeId = null;
+
+function getFilteredData() {
+  const wsFilter = document.getElementById('filter-workstream').value;
+  const stFilter = document.getElementById('filter-status').value;
+  const prFilter = document.getElementById('filter-priority').value;
+  const xfOnly = document.getElementById('filter-crossfn').checked;
+
+  let nodes = nodesData.filter(n => {
+    if (wsFilter !== 'all' && n.function !== wsFilter) return false;
+    if (stFilter !== 'all' && n.status !== stFilter) return false;
+    if (prFilter !== 'all' && n.priority !== prFilter) return false;
+    return true;
+  });
+  const nodeIds = new Set(nodes.map(n => n.milestone_id));
+  let edges = edgesData.filter(e =>
+    nodeIds.has(e.predecessor_id) && nodeIds.has(e.successor_id)
+  );
+  if (xfOnly) {
+    // Include cross-fn deps + nodes that participate
+    const xfEdges = edges.filter(e => e.cross_functional);
+    const xfNodeIds = new Set();
+    xfEdges.forEach(e => { xfNodeIds.add(e.predecessor_id); xfNodeIds.add(e.successor_id); });
+    // Also include isolated/same-fn nodes if no filter applied
+    if (wsFilter === 'all' && stFilter === 'all' && prFilter === 'all') {
+      nodes = nodes.filter(n => xfNodeIds.has(n.milestone_id) || n.total_degree === 0);
+      // Actually, let's show all nodes but only cross-fn edges
+      nodes = nodesData.filter(n => {
+        if (stFilter !== 'all' && n.status !== stFilter) return false;
+        if (prFilter !== 'all' && n.priority !== prFilter) return false;
+        return true;
+      });
+    }
+    edges = xfEdges;
+  }
+  return { nodes, edges };
+}
+
+function initGraph() {
+  const svg = d3.select('#chart-svg');
+  svg.selectAll('*').remove();
+
+  const container = document.getElementById('graph-container');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+
+  svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+  // Defs for arrowheads
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-4L10,0L0,4')
+    .attr('fill', '#4a4e68');
+
+  defs.append('marker')
+    .attr('id', 'arrow-red')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-4L10,0L0,4')
+    .attr('fill', '#EF4444');
+
+  defs.append('marker')
+    .attr('id', 'arrow-amber')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-4L10,0L0,4')
+    .attr('fill', '#F59E0B');
+
+  defs.append('marker')
+    .attr('id', 'arrow-highlight')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20).attr('refY', 0)
+    .attr('markerWidth', 6).attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-4L10,0L0,4')
+    .attr('fill', '#5b8dee');
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.1, 5])
+    .on('zoom', (event) => {
+      svgG.attr('transform', event.transform);
+      updateMinimap(event.transform);
+    });
+  svg.call(zoom);
+
+  svgG = svg.append('g');
+  linkG = svgG.append('g').attr('class', 'links');
+  nodeG = svgG.append('g').attr('class', 'nodes');
+  labelG = svgG.append('g').attr('class', 'labels');
+
+  const data = getFilteredData();
+  currentNodes = data.nodes.map(n => ({...n, x: undefined, y: undefined}));
+  currentEdges = data.edges.map(e => ({...e}));
+
+  const nodeIndex = new Map();
+  currentNodes.forEach((n,i) => nodeIndex.set(n.milestone_id, i));
+
+  const links = currentEdges
+    .filter(e => nodeIndex.has(e.predecessor_id) && nodeIndex.has(e.successor_id))
+    .map(e => ({
+      source: nodeIndex.get(e.predecessor_id),
+      target: nodeIndex.get(e.successor_id),
+      ...e
+    }));
+
+  // Workstream Y positions for clustering
+  const wsY = {};
+  wsList.forEach((w, i) => { wsY[w] = (i / (wsList.length - 1)) * height * 0.8 + height * 0.1; });
+
+  simulation = d3.forceSimulation(currentNodes)
+    .force('link', d3.forceLink(links).distance(80).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-120).distanceMax(400))
+    .force('center', d3.forceCenter(width/2, height/2))
+    .force('x', d3.forceX(width/2).strength(0.03))
+    .force('y', d3.forceY(d => wsY[d.function] || height/2).strength(0.12))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d) + 4))
+    .alphaDecay(0.02);
+
+  // Draw links
+  const link = linkG.selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('stroke', d => {
+      const pred = nodeMap.get(d.predecessor_id);
+      if (pred && (pred.status === 'Blocked')) return '#EF4444';
+      if (pred && (pred.status === 'At Risk')) return '#F59E0B';
+      return '#3a3e58';
+    })
+    .attr('stroke-width', d => d.cross_functional ? 1.5 : 1)
+    .attr('stroke-dasharray', d => d.cross_functional ? '6,3' : 'none')
+    .attr('marker-end', d => {
+      const pred = nodeMap.get(d.predecessor_id);
+      if (pred && pred.status === 'Blocked') return 'url(#arrow-red)';
+      if (pred && pred.status === 'At Risk') return 'url(#arrow-amber)';
+      return 'url(#arrow)';
+    })
+    .attr('opacity', 0.6);
+
+  // Draw nodes
+  const colorByStatus = document.getElementById('color-by-status').checked;
+
+  const node = nodeG.selectAll('g')
+    .data(currentNodes)
+    .join('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+      })
+      .on('drag', (event, d) => {
+        d.fx = event.x; d.fy = event.y;
+      })
+      .on('end', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+      })
+    );
+
+  node.each(function(d) {
+    const g = d3.select(this);
+    const r = nodeRadius(d);
+    const fillColor = colorByStatus ? (statusColors[d.status] || '#888') : (wsColors[d.function] || '#888');
+    const isMilestone = d.priority === 'Critical';
+
+    if (isMilestone) {
+      // Diamond shape for critical/milestone
+      g.append('path')
+        .attr('d', `M0,${-r} L${r},0 L0,${r} L${-r},0 Z`)
+        .attr('fill', fillColor)
+        .attr('stroke', d.downstream_count > 10 ? '#fff' : fillColor)
+        .attr('stroke-width', d.downstream_count > 10 ? 2 : 1)
+        .attr('opacity', 0.9);
+    } else {
+      g.append('circle')
+        .attr('r', r)
+        .attr('fill', fillColor)
+        .attr('stroke', d.downstream_count > 10 ? '#fff' : fillColor)
+        .attr('stroke-width', d.downstream_count > 10 ? 2 : 1)
+        .attr('opacity', 0.9);
+    }
+  });
+
+  // Labels for nodes with high degree
+  const label = labelG.selectAll('text')
+    .data(currentNodes.filter(n => n.total_degree >= 3 || n.downstream_count >= 8))
+    .join('text')
+    .text(d => d.milestone_id)
+    .attr('font-size', 8)
+    .attr('fill', '#ccc')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => -nodeRadius(d) - 4)
+    .attr('pointer-events', 'none');
+
+  // Interactions
+  node.on('mouseover', function(event, d) {
+    const html = `<div class="tt-title">${d.milestone_id}: ${d.name}</div>
+      <div class="tt-row"><span class="tt-label">Workstream</span><span class="tt-val">${d.function}</span></div>
+      <div class="tt-row"><span class="tt-label">Owner</span><span class="tt-val">${d.owner || '—'}</span></div>
+      <div class="tt-row"><span class="tt-label">Status</span><span class="tt-val">${d.status}</span></div>
+      <div class="tt-row"><span class="tt-label">Priority</span><span class="tt-val">${d.priority}</span></div>
+      <div class="tt-row"><span class="tt-label">Target Date</span><span class="tt-val">${d.date_display || d.target_date || '—'}</span></div>
+      <div class="tt-row"><span class="tt-label">Downstream</span><span class="tt-val">${d.downstream_count} tasks</span></div>
+      <div class="tt-row"><span class="tt-label">Upstream</span><span class="tt-val">${d.upstream_count} tasks</span></div>`;
+    showTooltip(event, html);
+    d3.select(this).select('circle, path').attr('opacity', 1).attr('stroke', '#fff').attr('stroke-width', 2.5);
+  })
+  .on('mousemove', (event) => { showTooltip(event, tooltip.innerHTML); })
+  .on('mouseout', function(event, d) {
+    hideTooltip();
+    const r = nodeRadius(d);
+    d3.select(this).select('circle, path')
+      .attr('opacity', 0.9)
+      .attr('stroke', d.downstream_count > 10 ? '#fff' : (colorByStatus ? (statusColors[d.status]||'#888') : (wsColors[d.function]||'#888')))
+      .attr('stroke-width', d.downstream_count > 10 ? 2 : 1);
+  })
+  .on('click', function(event, d) {
+    event.stopPropagation();
+    selectedNodeId = d.milestone_id;
+    highlightChain(d.milestone_id, 'both');
+    showDetailPanel(d);
+  })
+  .on('contextmenu', function(event, d) {
+    event.preventDefault();
+    event.stopPropagation();
+    contextNodeId = d.milestone_id;
+    contextMenu.style.left = event.clientX + 'px';
+    contextMenu.style.top = event.clientY + 'px';
+    contextMenu.classList.add('open');
+  });
+
+  // Click background to reset
+  svg.on('click', () => {
+    resetHighlight();
+    closeDetailPanel();
+  });
+
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+    label.attr('x', d => d.x).attr('y', d => d.y - nodeRadius(d) - 4);
+  });
+
+  // Initial zoom to fit
+  simulation.on('end', () => {
+    const bounds = svgG.node().getBBox();
+    const dx = bounds.width, dy = bounds.height;
+    const scale = Math.min(width / (dx + 80), height / (dy + 80), 1.5) * 0.9;
+    const tx = width/2 - (bounds.x + dx/2) * scale;
+    const ty = height/2 - (bounds.y + dy/2) * scale;
+    svg.transition().duration(500).call(zoom.transform,
+      d3.zoomIdentity.translate(tx, ty).scale(scale));
+  });
+}
+
+function nodeRadius(d) {
+  return Math.max(4, Math.min(18, 4 + Math.sqrt(d.downstream_count) * 2.5));
+}
+
+function highlightChain(id, direction) {
+  let chain = new Set([id]);
+  if (direction === 'upstream' || direction === 'both') {
+    getUpstream(id).forEach(n => chain.add(n));
+  }
+  if (direction === 'downstream' || direction === 'both') {
+    getDownstream(id).forEach(n => chain.add(n));
+  }
+
+  nodeG.selectAll('g').transition().duration(200)
+    .attr('opacity', d => chain.has(d.milestone_id) ? 1 : 0.08);
+  linkG.selectAll('line').transition().duration(200)
+    .attr('opacity', d => {
+      const srcId = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tgtId = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return chain.has(srcId) && chain.has(tgtId) ? 0.8 : 0.02;
+    })
+    .attr('stroke', d => {
+      const srcId = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tgtId = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      if (chain.has(srcId) && chain.has(tgtId)) return '#5b8dee';
+      return '#3a3e58';
+    })
+    .attr('stroke-width', d => {
+      const srcId = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tgtId = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return chain.has(srcId) && chain.has(tgtId) ? 2.5 : 1;
+    })
+    .attr('marker-end', d => {
+      const srcId = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tgtId = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return chain.has(srcId) && chain.has(tgtId) ? 'url(#arrow-highlight)' : 'url(#arrow)';
+    });
+  labelG.selectAll('text').transition().duration(200)
+    .attr('opacity', d => chain.has(d.milestone_id) ? 1 : 0.05);
+}
+
+function resetHighlight() {
+  const colorByStatus = document.getElementById('color-by-status').checked;
+  nodeG.selectAll('g').transition().duration(200).attr('opacity', 1);
+  linkG.selectAll('line').transition().duration(200)
+    .attr('opacity', 0.6)
+    .attr('stroke', d => {
+      const pid = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const pred = nodeMap.get(pid);
+      if (pred && pred.status === 'Blocked') return '#EF4444';
+      if (pred && pred.status === 'At Risk') return '#F59E0B';
+      return '#3a3e58';
+    })
+    .attr('stroke-width', d => d.cross_functional ? 1.5 : 1)
+    .attr('marker-end', d => {
+      const pid = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const pred = nodeMap.get(pid);
+      if (pred && pred.status === 'Blocked') return 'url(#arrow-red)';
+      if (pred && pred.status === 'At Risk') return 'url(#arrow-amber)';
+      return 'url(#arrow)';
+    });
+  labelG.selectAll('text').transition().duration(200).attr('opacity', 1);
+  selectedNodeId = null;
+}
+
+// DETAIL PANEL
+function showDetailPanel(d) {
+  const panel = document.getElementById('detail-panel');
+  const statusCol = statusColors[d.status] || '#888';
+  const wsCol = wsColors[d.function] || '#888';
+
+  let html = `<h3>${d.milestone_id} <button class="detail-close" onclick="closeDetailPanel()">✕</button></h3>
+    <div style="font-size:13px;font-weight:500;margin-bottom:12px;line-height:1.4;">${d.name}</div>
+    <div class="detail-field"><div class="label">Workstream</div><div class="value"><span class="detail-badge" style="background:${wsCol}22;color:${wsCol}">${d.function}</span></div></div>
+    <div class="detail-field"><div class="label">Owner</div><div class="value">${d.owner || '—'}</div></div>
+    <div class="detail-field"><div class="label">Status</div><div class="value"><span class="detail-badge" style="background:${statusCol}22;color:${statusCol}">${d.status}</span></div></div>
+    <div class="detail-field"><div class="label">Priority</div><div class="value">${d.priority}</div></div>
+    <div class="detail-field"><div class="label">Target Date</div><div class="value">${d.date_display || d.target_date || '—'}</div></div>`;
+  if (d.revised_date) html += `<div class="detail-field"><div class="label">Revised Date</div><div class="value" style="color:#F59E0B">${d.revised_date}</div></div>`;
+  html += `<div class="detail-field"><div class="label">Source</div><div class="value">${d.source}</div></div>
+    <div class="detail-field"><div class="label">Blast Radius</div><div class="value" style="color:${d.downstream_count > 15 ? '#EF4444' : d.downstream_count > 5 ? '#F59E0B' : '#22C55E'}">↓ ${d.downstream_count} downstream &nbsp; ↑ ${d.upstream_count} upstream</div></div>`;
+
+  // Predecessors
+  const preds = adjIn.get(d.milestone_id) || [];
+  if (preds.length) {
+    html += `<div class="detail-section"><h4>Predecessors (${preds.length})</h4>`;
+    preds.forEach(pid => {
+      const p = nodeMap.get(pid);
+      if (p) {
+        html += `<div class="dep-item" onclick="navigateToNode('${pid}')"><div class="dep-dot" style="background:${wsColors[p.function]||'#888'}"></div><span style="color:var(--accent)">${pid}</span> ${p.name.substring(0,40)}</div>`;
+      }
+    });
+    html += `</div>`;
+  }
+
+  // Successors
+  const succs = adjOut.get(d.milestone_id) || [];
+  if (succs.length) {
+    html += `<div class="detail-section"><h4>Successors (${succs.length})</h4>`;
+    succs.forEach(sid => {
+      const s = nodeMap.get(sid);
+      if (s) {
+        html += `<div class="dep-item" onclick="navigateToNode('${sid}')"><div class="dep-dot" style="background:${wsColors[s.function]||'#888'}"></div><span style="color:var(--accent)">${sid}</span> ${s.name.substring(0,40)}</div>`;
+      }
+    });
+    html += `</div>`;
+  }
+
+  if (d.notes) html += `<div class="detail-section"><h4>Notes</h4><div style="font-size:11px;color:var(--text-secondary);line-height:1.5">${d.notes}</div></div>`;
+
+  panel.innerHTML = html;
+  panel.classList.add('open');
+}
+function closeDetailPanel() {
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+function navigateToNode(id) {
+  selectedNodeId = id;
+  highlightChain(id, 'both');
+  const n = nodeMap.get(id);
+  if (n) showDetailPanel(n);
+}
+
+// SEARCH
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.classList.remove('open'); return; }
+  const matches = nodesData.filter(n =>
+    n.milestone_id.toLowerCase().includes(q) || n.name.toLowerCase().includes(q)
+  ).slice(0, 10);
+  searchResults.innerHTML = matches.map(n =>
+    `<div class="search-result-item" onclick="navigateToNode('${n.milestone_id}');document.getElementById('search-results').classList.remove('open');document.getElementById('search-input').value='';"><span class="sr-id">${n.milestone_id}</span>${n.name.substring(0,50)}</div>`
+  ).join('');
+  searchResults.classList.add('open');
+});
+searchInput.addEventListener('blur', () => { setTimeout(() => searchResults.classList.remove('open'), 200); });
+
+// FILTER HANDLERS
+['filter-workstream','filter-status','filter-priority','filter-crossfn','color-by-status'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    if (simulation) simulation.stop();
+    initGraph();
+  });
+});
+
+// MINIMAP
+function updateMinimap(transform) {
+  // Simplified minimap
+  const mmSvg = d3.select('#minimap svg');
+  mmSvg.selectAll('*').remove();
+  const container = document.getElementById('graph-container');
+  const w = container.clientWidth, h = container.clientHeight;
+  const mmW = 180, mmH = 120;
+  const scale = Math.min(mmW / w, mmH / h) * transform.k;
+
+  // Viewport rect
+  const vx = -transform.x / transform.k;
+  const vy = -transform.y / transform.k;
+  const vw = w / transform.k;
+  const vh = h / transform.k;
+
+  // Find bounds of all nodes
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  currentNodes.forEach(n => {
+    if (n.x !== undefined) {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y);
+    }
+  });
+  if (!isFinite(minX)) return;
+  const gw = maxX - minX + 100, gh = maxY - minY + 100;
+  const gs = Math.min(mmW/gw, mmH/gh) * 0.9;
+  const gox = (mmW - gw*gs)/2 - minX*gs + 50*gs;
+  const goy = (mmH - gh*gs)/2 - minY*gs + 50*gs;
+
+  // Draw nodes as tiny dots
+  currentNodes.forEach(n => {
+    if (n.x !== undefined) {
+      mmSvg.append('circle')
+        .attr('cx', n.x * gs + gox)
+        .attr('cy', n.y * gs + goy)
+        .attr('r', 1.5)
+        .attr('fill', wsColors[n.function] || '#888')
+        .attr('opacity', 0.7);
+    }
+  });
+
+  // Viewport rectangle
+  mmSvg.append('rect')
+    .attr('class', 'viewport-rect')
+    .attr('x', vx * gs + gox)
+    .attr('y', vy * gs + goy)
+    .attr('width', vw * gs)
+    .attr('height', vh * gs);
+}
+
+// ===================== MATRIX VIEW =====================
+function renderMatrix() {
+  const container = document.getElementById('matrix-container');
+  container.innerHTML = '';
+  const n = functionsList.length;
+  const cellSize = 65;
+  const margin = { top: 120, left: 130, right: 20, bottom: 20 };
+  const w = margin.left + n * cellSize + margin.right;
+  const h = margin.top + n * cellSize + margin.bottom;
+
+  const svg = d3.select(container).append('svg')
+    .attr('width', w).attr('height', h);
+
+  // Find max
+  let maxVal = 0;
+  functionsList.forEach(f1 => functionsList.forEach(f2 => {
+    maxVal = Math.max(maxVal, matrixData[f1+'|'+f2] || 0);
+  }));
+
+  const colorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, maxVal]);
+
+  // Column headers
+  svg.selectAll('.col-label')
+    .data(functionsList)
+    .join('text')
+    .attr('class', 'col-label')
+    .attr('x', (d,i) => margin.left + i * cellSize + cellSize/2)
+    .attr('y', margin.top - 10)
+    .attr('text-anchor', 'end')
+    .attr('transform', (d,i) => `rotate(-45,${margin.left + i*cellSize + cellSize/2},${margin.top-10})`)
+    .attr('font-size', 11)
+    .attr('fill', d => wsColors[d] || '#aaa')
+    .attr('font-weight', 600)
+    .text(d => d);
+
+  // Row headers
+  svg.selectAll('.row-label')
+    .data(functionsList)
+    .join('text')
+    .attr('class', 'row-label')
+    .attr('x', margin.left - 10)
+    .attr('y', (d,i) => margin.top + i * cellSize + cellSize/2 + 4)
+    .attr('text-anchor', 'end')
+    .attr('font-size', 11)
+    .attr('fill', d => wsColors[d] || '#aaa')
+    .attr('font-weight', 600)
+    .text(d => d);
+
+  // Cells
+  functionsList.forEach((f1, i) => {
+    functionsList.forEach((f2, j) => {
+      const val = matrixData[f1+'|'+f2] || 0;
+      const g = svg.append('g');
+      g.append('rect')
+        .attr('x', margin.left + j * cellSize)
+        .attr('y', margin.top + i * cellSize)
+        .attr('width', cellSize - 2)
+        .attr('height', cellSize - 2)
+        .attr('rx', 3)
+        .attr('fill', val > 0 ? colorScale(val) : '#1c1f2e')
+        .attr('stroke', i === j ? (wsColors[f1]||'#555') : '#2a2e42')
+        .attr('stroke-width', i === j ? 2 : 1)
+        .attr('opacity', 0.9)
+        .attr('cursor', 'pointer')
+        .on('mouseover', function(event) {
+          d3.select(this).attr('stroke', '#fff').attr('stroke-width', 2);
+          showTooltip(event, `<div class="tt-title">${f1} → ${f2}</div>
+            <div class="tt-row"><span class="tt-label">Dependencies</span><span class="tt-val">${val}</span></div>
+            <div class="tt-row"><span class="tt-label">Type</span><span class="tt-val">${i===j ? 'Intra-workstream' : 'Cross-workstream'}</span></div>`);
+        })
+        .on('mouseout', function() {
+          d3.select(this).attr('stroke', i===j ? (wsColors[f1]||'#555') : '#2a2e42').attr('stroke-width', i===j ? 2 : 1);
+          hideTooltip();
+        });
+      if (val > 0) {
+        g.append('text')
+          .attr('x', margin.left + j * cellSize + cellSize/2 - 1)
+          .attr('y', margin.top + i * cellSize + cellSize/2 + 4)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', 13)
+          .attr('font-weight', 700)
+          .attr('fill', val > maxVal*0.5 ? '#fff' : '#ccc')
+          .attr('pointer-events', 'none')
+          .text(val);
+      }
+    });
+  });
+
+  // Axis labels
+  svg.append('text')
+    .attr('x', margin.left + n*cellSize/2)
+    .attr('y', h - 2)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', 11).attr('fill', '#888')
+    .text('Successor Workstream →');
+  svg.append('text')
+    .attr('transform', `rotate(-90)`)
+    .attr('x', -(margin.top + n*cellSize/2))
+    .attr('y', 14)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', 11).attr('fill', '#888')
+    .text('← Predecessor Workstream');
+}
+
+// ===================== RISK DASHBOARD =====================
+function renderRiskDashboard() {
+  const grid = document.getElementById('risk-grid');
+  grid.innerHTML = '';
+
+  // Panel A: Highest Blast-Radius Tasks
+  const blastSorted = [...nodesData].sort((a,b) => b.downstream_count - a.downstream_count).slice(0, 15);
+  let blastHtml = `<div class="risk-card full"><h3>🎯 Highest Blast-Radius Tasks</h3>
+    <table class="blast-table"><thead><tr>
+      <th>ID</th><th>Name</th><th>Workstream</th><th>Owner</th><th>Status</th><th>Date</th><th>↓ Down</th>
+    </tr></thead><tbody>`;
+  blastSorted.forEach(n => {
+    const sc = statusColors[n.status] || '#888';
+    blastHtml += `<tr><td style="color:var(--accent);font-weight:600">${n.milestone_id}</td>
+      <td>${n.name.substring(0,45)}</td>
+      <td><span style="color:${wsColors[n.function]||'#888'}">${n.function}</span></td>
+      <td>${n.owner||'—'}</td>
+      <td><span class="detail-badge" style="background:${sc}22;color:${sc}">${n.status}</span></td>
+      <td>${n.date_display||'—'}</td>
+      <td style="font-weight:700;color:${n.downstream_count>15?'#EF4444':n.downstream_count>5?'#F59E0B':'#22C55E'}">${n.downstream_count}</td></tr>`;
+  });
+  blastHtml += `</tbody></table></div>`;
+  grid.innerHTML += blastHtml;
+
+  // Panel B: Workstream Health
+  let wsHtml = `<div class="risk-card full"><h3>🏥 Workstream Health</h3><div class="ws-health-grid">`;
+  wsList.forEach(ws => {
+    const tasks = nodesData.filter(n => n.function === ws);
+    const total = tasks.length;
+    const complete = tasks.filter(t => t.status === 'Complete').length;
+    const atRisk = tasks.filter(t => t.status === 'At Risk').length;
+    const blocked = tasks.filter(t => t.status === 'Blocked').length;
+    const deferred = tasks.filter(t => t.status === 'Deferred').length;
+    const inProgress = tasks.filter(t => t.status === 'In Progress').length;
+    const notStarted = tasks.filter(t => t.status === 'Not Started').length;
+    const pctComplete = total > 0 ? Math.round(complete / total * 100) : 0;
+    const xfDeps = edgesData.filter(e => e.cross_functional && (e.predecessor_func === ws || e.successor_func === ws)).length;
+    const health = blocked > 2 || atRisk > 3 ? '#EF4444' : atRisk > 1 ? '#F59E0B' : '#22C55E';
+
+    wsHtml += `<div class="ws-health-card" style="border-left-color:${wsColors[ws]||'#888'}">
+      <div class="ws-name" style="color:${wsColors[ws]||'#888'}">${ws}</div>
+      <div class="ws-stat"><span>${pctComplete}%</span> complete (${complete}/${total})</div>
+      <div class="ws-stat"><span style="color:#F59E0B">${atRisk}</span> at risk &nbsp; <span style="color:#EF4444">${blocked}</span> blocked</div>
+      <div class="ws-stat"><span>${xfDeps}</span> cross-fn dependencies</div>
+      <div class="status-bar">
+        <div class="seg" style="width:${complete/total*100}%;background:#22C55E"></div>
+        <div class="seg" style="width:${inProgress/total*100}%;background:#3B82F6"></div>
+        <div class="seg" style="width:${atRisk/total*100}%;background:#F59E0B"></div>
+        <div class="seg" style="width:${blocked/total*100}%;background:#EF4444"></div>
+        <div class="seg" style="width:${deferred/total*100}%;background:#9CA3AF"></div>
+        <div class="seg" style="width:${notStarted/total*100}%;background:#6B7280"></div>
+      </div>
+    </div>`;
+  });
+  wsHtml += `</div></div>`;
+  grid.innerHTML += wsHtml;
+
+  // Panel C: Status Distribution
+  const statusCounts = {};
+  nodesData.forEach(n => { statusCounts[n.status] = (statusCounts[n.status]||0) + 1; });
+  let statusHtml = `<div class="risk-card"><h3>📊 Status Distribution</h3><div id="status-chart"></div></div>`;
+  grid.innerHTML += statusHtml;
+  // Render bar chart for status
+  setTimeout(() => {
+    const container = document.getElementById('status-chart');
+    const entries = Object.entries(statusCounts).sort((a,b) => b[1]-a[1]);
+    const bw = 280, bh = 160, bm = {top:10,right:10,bottom:20,left:80};
+    const svg = d3.select(container).append('svg').attr('width', bw).attr('height', bh);
+    const x = d3.scaleLinear().domain([0, d3.max(entries, d=>d[1])]).range([bm.left, bw-bm.right]);
+    const y = d3.scaleBand().domain(entries.map(d=>d[0])).range([bm.top, bh-bm.bottom]).padding(0.3);
+    svg.selectAll('rect').data(entries).join('rect')
+      .attr('x', bm.left).attr('y', d => y(d[0]))
+      .attr('width', d => x(d[1]) - bm.left).attr('height', y.bandwidth())
+      .attr('fill', d => statusColors[d[0]] || '#888').attr('rx', 2).attr('opacity', 0.85);
+    svg.selectAll('.bar-label').data(entries).join('text')
+      .attr('x', d => x(d[1]) + 4).attr('y', d => y(d[0]) + y.bandwidth()/2 + 4)
+      .attr('font-size', 10).attr('fill', '#ccc').text(d => d[1]);
+    svg.selectAll('.bar-name').data(entries).join('text')
+      .attr('x', bm.left - 4).attr('y', d => y(d[0]) + y.bandwidth()/2 + 4)
+      .attr('text-anchor', 'end').attr('font-size', 10).attr('fill', '#aaa').text(d => d[0]);
+  }, 50);
+
+  // Panel D: Priority Distribution
+  const priCounts = {};
+  nodesData.forEach(n => { priCounts[n.priority] = (priCounts[n.priority]||0) + 1; });
+  let priHtml = `<div class="risk-card"><h3>⚡ Priority Distribution</h3><div id="priority-chart"></div></div>`;
+  grid.innerHTML += priHtml;
+  setTimeout(() => {
+    const container = document.getElementById('priority-chart');
+    const priColors = {'Critical':'#EF4444','High':'#F59E0B','Medium':'#3B82F6','Low':'#6B7280'};
+    const entries = ['Critical','High','Medium','Low'].map(p => [p, priCounts[p]||0]);
+    const bw = 280, bh = 140, bm = {top:10,right:10,bottom:20,left:70};
+    const svg = d3.select(container).append('svg').attr('width', bw).attr('height', bh);
+    const x = d3.scaleLinear().domain([0, d3.max(entries, d=>d[1])]).range([bm.left, bw-bm.right]);
+    const y = d3.scaleBand().domain(entries.map(d=>d[0])).range([bm.top, bh-bm.bottom]).padding(0.3);
+    svg.selectAll('rect').data(entries).join('rect')
+      .attr('x', bm.left).attr('y', d => y(d[0]))
+      .attr('width', d => x(d[1]) - bm.left).attr('height', y.bandwidth())
+      .attr('fill', d => priColors[d[0]] || '#888').attr('rx', 2).attr('opacity', 0.85);
+    svg.selectAll('.bar-label').data(entries).join('text')
+      .attr('x', d => x(d[1]) + 4).attr('y', d => y(d[0]) + y.bandwidth()/2 + 4)
+      .attr('font-size', 10).attr('fill', '#ccc').text(d => d[1]);
+    svg.selectAll('.bar-name').data(entries).join('text')
+      .attr('x', bm.left - 4).attr('y', d => y(d[0]) + y.bandwidth()/2 + 4)
+      .attr('text-anchor', 'end').attr('font-size', 10).attr('fill', '#aaa').text(d => d[0]);
+  }, 50);
+
+  // Panel E: Cross-functional coupling summary
+  const coupling = [];
+  for (let i = 0; i < functionsList.length; i++) {
+    for (let j = i+1; j < functionsList.length; j++) {
+      const f1 = functionsList[i], f2 = functionsList[j];
+      const count = (matrixData[f1+'|'+f2]||0) + (matrixData[f2+'|'+f1]||0);
+      if (count > 0) coupling.push({ pair: `${f1} ↔ ${f2}`, count, f1, f2 });
+    }
+  }
+  coupling.sort((a,b) => b.count - a.count);
+  let couplingHtml = `<div class="risk-card full"><h3>🔗 Cross-Workstream Coupling Intensity</h3>
+    <table class="blast-table"><thead><tr><th>Workstream Pair</th><th>Bidirectional Dependencies</th><th>Risk</th></tr></thead><tbody>`;
+  coupling.slice(0, 12).forEach(c => {
+    const risk = c.count > 8 ? 'High' : c.count > 4 ? 'Medium' : 'Low';
+    const riskCol = risk === 'High' ? '#EF4444' : risk === 'Medium' ? '#F59E0B' : '#22C55E';
+    couplingHtml += `<tr>
+      <td><span style="color:${wsColors[c.f1]||'#888'}">${c.f1}</span> ↔ <span style="color:${wsColors[c.f2]||'#888'}">${c.f2}</span></td>
+      <td style="font-weight:700">${c.count}</td>
+      <td><span class="detail-badge" style="background:${riskCol}22;color:${riskCol}">${risk}</span></td></tr>`;
+  });
+  couplingHtml += `</tbody></table></div>`;
+  grid.innerHTML += couplingHtml;
+}
+
+// ===================== SIMULATION VIEW =====================
+let simNodes, simEdges, simSimulation;
+
+function renderSimGraph() {
+  const svg = d3.select('#sim-svg');
+  svg.selectAll('*').remove();
+  const container = document.getElementById('sim-graph-container');
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+  const defs = svg.append('defs');
+  defs.append('marker').attr('id','sim-arrow').attr('viewBox','0 -5 10 10')
+    .attr('refX',18).attr('refY',0).attr('markerWidth',5).attr('markerHeight',5)
+    .attr('orient','auto').append('path').attr('d','M0,-4L10,0L0,4').attr('fill','#4a4e68');
+  defs.append('marker').attr('id','sim-arrow-red').attr('viewBox','0 -5 10 10')
+    .attr('refX',18).attr('refY',0).attr('markerWidth',5).attr('markerHeight',5)
+    .attr('orient','auto').append('path').attr('d','M0,-4L10,0L0,4').attr('fill','#EF4444');
+
+  const zoom = d3.zoom().scaleExtent([0.1,5]).on('zoom', e => gSim.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const gSim = svg.append('g');
+  const linkGSim = gSim.append('g');
+  const nodeGSim = gSim.append('g');
+
+  // Only show connected nodes
+  const connectedIds = new Set();
+  edgesData.forEach(e => { connectedIds.add(e.predecessor_id); connectedIds.add(e.successor_id); });
+  simNodes = nodesData.filter(n => connectedIds.has(n.milestone_id)).map(n => ({...n}));
+  simEdges = edgesData.map(e => ({...e}));
+
+  const simNodeIndex = new Map();
+  simNodes.forEach((n,i) => simNodeIndex.set(n.milestone_id, i));
+
+  const simLinks = simEdges
+    .filter(e => simNodeIndex.has(e.predecessor_id) && simNodeIndex.has(e.successor_id))
+    .map(e => ({ source: simNodeIndex.get(e.predecessor_id), target: simNodeIndex.get(e.successor_id), ...e }));
+
+  const wsY = {};
+  wsList.forEach((w,i) => { wsY[w] = (i/(wsList.length-1))*height*0.8 + height*0.1; });
+
+  simSimulation = d3.forceSimulation(simNodes)
+    .force('link', d3.forceLink(simLinks).distance(70).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-100).distanceMax(350))
+    .force('center', d3.forceCenter(width/2, height/2))
+    .force('y', d3.forceY(d => wsY[d.function]||height/2).strength(0.12))
+    .force('collision', d3.forceCollide().radius(d => nodeRadius(d)+3))
+    .alphaDecay(0.025);
+
+  const link = linkGSim.selectAll('line').data(simLinks).join('line')
+    .attr('stroke','#3a3e58').attr('stroke-width',1).attr('marker-end','url(#sim-arrow)').attr('opacity',0.5);
+
+  const node = nodeGSim.selectAll('circle').data(simNodes).join('circle')
+    .attr('r', d => nodeRadius(d))
+    .attr('fill', d => wsColors[d.function]||'#888')
+    .attr('stroke', d => wsColors[d.function]||'#888')
+    .attr('stroke-width', 1)
+    .attr('opacity', 0.85)
+    .attr('cursor', 'pointer')
+    .on('mouseover', function(event, d) {
+      showTooltip(event, `<div class="tt-title">${d.milestone_id}: ${d.name}</div>
+        <div class="tt-row"><span class="tt-label">Workstream</span><span class="tt-val">${d.function}</span></div>
+        <div class="tt-row"><span class="tt-label">Downstream</span><span class="tt-val">${d.downstream_count}</span></div>`);
+    })
+    .on('mouseout', () => hideTooltip())
+    .on('click', function(event, d) {
+      document.getElementById('sim-task-select').value = d.milestone_id;
+    });
+
+  simSimulation.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+  });
+}
+
+function runSimulation() {
+  const taskId = document.getElementById('sim-task-select').value;
+  const delayDays = parseInt(document.getElementById('sim-delay-days').value) || 10;
+  if (!taskId) return;
+
+  const downstream = getDownstream(taskId);
+  const affected = new Set([taskId, ...downstream]);
+  const affectedWs = new Set();
+  affected.forEach(id => {
+    const n = nodeMap.get(id);
+    if (n) affectedWs.add(n.function);
+  });
+
+  // Highlight affected in sim graph
+  const svg = d3.select('#sim-svg');
+  svg.selectAll('circle')
+    .transition().duration(400)
+    .attr('fill', d => affected.has(d.milestone_id) ? '#EF4444' : wsColors[d.function]||'#888')
+    .attr('opacity', d => affected.has(d.milestone_id) ? 1 : 0.15)
+    .attr('stroke', d => affected.has(d.milestone_id) ? '#ff6666' : wsColors[d.function]||'#888')
+    .attr('stroke-width', d => d.milestone_id === taskId ? 3 : affected.has(d.milestone_id) ? 2 : 1);
+
+  svg.selectAll('line')
+    .transition().duration(400)
+    .attr('opacity', d => {
+      const sid = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tid = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return affected.has(sid) && affected.has(tid) ? 0.8 : 0.05;
+    })
+    .attr('stroke', d => {
+      const sid = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tid = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return affected.has(sid) && affected.has(tid) ? '#EF4444' : '#3a3e58';
+    })
+    .attr('stroke-width', d => {
+      const sid = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tid = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return affected.has(sid) && affected.has(tid) ? 2 : 1;
+    })
+    .attr('marker-end', d => {
+      const sid = typeof d.source === 'object' ? d.source.milestone_id : d.predecessor_id;
+      const tid = typeof d.target === 'object' ? d.target.milestone_id : d.successor_id;
+      return affected.has(sid) && affected.has(tid) ? 'url(#sim-arrow-red)' : 'url(#sim-arrow)';
+    });
+
+  // Update results panel
+  const taskNode = nodeMap.get(taskId);
+  const affectedList = [...affected].map(id => nodeMap.get(id)).filter(Boolean);
+  const criticalAffected = affectedList.filter(n => n.priority === 'Critical');
+
+  let html = `<h3>Cascade Impact</h3>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--text-muted);">Delayed Task</div>
+      <div style="font-size:13px;font-weight:600;color:var(--accent)">${taskId}: ${taskNode?.name||''}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${delayDays}-day delay</div>
+    </div>
+    <div class="sim-impact-num">${affected.size}</div>
+    <div class="sim-impact-label">tasks impacted</div>
+    <div class="sim-impact-row"><span>Workstreams affected</span><span class="val" style="color:#F59E0B">${affectedWs.size} / ${wsList.length}</span></div>
+    <div class="sim-impact-row"><span>Critical tasks at risk</span><span class="val" style="color:#EF4444">${criticalAffected.length}</span></div>
+    <div class="sim-impact-row"><span>Cross-fn deps impacted</span><span class="val">${edgesData.filter(e => affected.has(e.predecessor_id) && affected.has(e.successor_id) && e.cross_functional).length}</span></div>`;
+
+  // Workstream breakdown
+  const wsBreakdown = {};
+  affectedList.forEach(n => { wsBreakdown[n.function] = (wsBreakdown[n.function]||0)+1; });
+  html += `<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+    <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Impact by Workstream</div>`;
+  Object.entries(wsBreakdown).sort((a,b)=>b[1]-a[1]).forEach(([ws,cnt]) => {
+    html += `<div class="sim-impact-row"><span style="color:${wsColors[ws]||'#888'}">${ws}</span><span class="val">${cnt}</span></div>`;
+  });
+  html += `</div>`;
+
+  // Critical tasks affected
+  if (criticalAffected.length > 0) {
+    html += `<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Critical Tasks at Risk</div>`;
+    criticalAffected.forEach(n => {
+      html += `<div style="font-size:11px;color:var(--text-secondary);padding:4px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--accent);font-weight:600">${n.milestone_id}</span> ${n.name.substring(0,40)}
+        <div style="font-size:10px;color:var(--text-muted)">${n.function} · ${n.date_display||'TBD'}</div></div>`;
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById('sim-results').innerHTML = html;
+}
+
+function resetSimulation() {
+  renderSimGraph();
+  document.getElementById('sim-results').innerHTML = `<h3>Cascade Impact</h3>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Select a task and delay amount, then click "Run Cascade" to simulate the ripple effect through dependencies.</p>`;
+}
+
+// ===================== GANTT VIEW =====================
+function renderGantt() {
+  const container = document.getElementById('gantt-container');
+  container.innerHTML = '';
+
+  const groupBy = document.getElementById('gantt-group').value;
+  const showDeps = document.getElementById('gantt-deps').checked;
+
+  // Filter to tasks with valid dates
+  const validTasks = nodesData.filter(n => /^\d{4}-\d{2}-\d{2}$/.test(n.target_date));
+  if (!validTasks.length) { container.innerHTML = '<p style="padding:20px;color:var(--text-muted);">No tasks with valid dates.</p>'; return; }
+
+  // Parse dates
+  validTasks.forEach(t => {
+    t._start = new Date(t.target_date);
+    // Estimate end as start + 14 days (we don't have end dates, so approximate)
+    t._end = new Date(t._start.getTime() + 14*86400000);
+    if (t.revised_date && /^\d{4}-\d{2}-\d{2}$/.test(t.revised_date)) {
+      t._revised = new Date(t.revised_date);
+    }
+  });
+
+  // Group
+  const groups = {};
+  validTasks.forEach(t => {
+    const key = t[groupBy] || 'Other';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  // Sort groups, sort tasks within by date
+  const groupOrder = groupBy === 'function' ? wsList :
+    groupBy === 'status' ? ['Complete','In Progress','At Risk','Not Started','Deferred'] :
+    ['Critical','High','Medium','Low'];
+  const orderedGroups = groupOrder.filter(g => groups[g]).map(g => ({ name: g, tasks: groups[g].sort((a,b) => a._start - b._start) }));
+
+  // Dimensions
+  const rowH = 22, groupHeaderH = 28, labelW = 180, rightPad = 40;
+  let totalRows = 0;
+  orderedGroups.forEach(g => { totalRows += 1 + g.tasks.length; });
+  const chartH = totalRows * rowH + 60;
+
+  const allDates = validTasks.map(t => t._start).concat(validTasks.map(t => t._end));
+  const minDate = d3.min(allDates);
+  const maxDate = d3.max(allDates);
+  const chartW = Math.max(container.clientWidth, 900);
+  const timeW = chartW - labelW - rightPad;
+
+  const svg = d3.select(container).append('svg')
+    .attr('width', chartW).attr('height', chartH + 40);
+
+  const x = d3.scaleTime().domain([minDate, maxDate]).range([labelW, labelW + timeW]);
+
+  // Time axis
+  const xAxis = d3.axisTop(x).ticks(d3.timeMonth.every(1)).tickFormat(d3.timeFormat('%b %Y'));
+  svg.append('g').attr('transform', `translate(0,30)`)
+    .call(xAxis)
+    .selectAll('text').attr('fill','#888').attr('font-size',9);
+  svg.selectAll('.domain,.tick line').attr('stroke','#2a2e42');
+
+  // Today line
+  const today = new Date();
+  if (today >= minDate && today <= maxDate) {
+    svg.append('line')
+      .attr('x1', x(today)).attr('x2', x(today))
+      .attr('y1', 30).attr('y2', chartH)
+      .attr('stroke', '#EF4444').attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '4,3').attr('opacity', 0.7);
+    svg.append('text')
+      .attr('x', x(today)).attr('y', 24)
+      .attr('text-anchor', 'middle').attr('font-size', 9).attr('fill', '#EF4444')
+      .text('Today');
+  }
+
+  let yPos = 40;
+  const taskPositions = new Map();
+
+  orderedGroups.forEach(group => {
+    // Group header
+    const gc = groupBy === 'function' ? (wsColors[group.name]||'#888') :
+      groupBy === 'status' ? (statusColors[group.name]||'#888') :
+      (group.name==='Critical'?'#EF4444':group.name==='High'?'#F59E0B':group.name==='Medium'?'#3B82F6':'#6B7280');
+
+    svg.append('rect')
+      .attr('x', 0).attr('y', yPos).attr('width', chartW).attr('height', groupHeaderH)
+      .attr('fill', gc).attr('opacity', 0.08);
+    svg.append('text')
+      .attr('x', 10).attr('y', yPos + groupHeaderH/2 + 4)
+      .attr('font-size', 11).attr('font-weight', 600).attr('fill', gc)
+      .text(`${group.name} (${group.tasks.length})`);
+    yPos += groupHeaderH;
+
+    group.tasks.forEach(task => {
+      const ty = yPos + rowH/2;
+      taskPositions.set(task.milestone_id, { x1: x(task._start), x2: x(task._end), y: ty });
+
+      // Row background
+      svg.append('rect')
+        .attr('x', 0).attr('y', yPos).attr('width', chartW).attr('height', rowH)
+        .attr('fill', 'transparent')
+        .attr('stroke', '#1c1f2e').attr('stroke-width', 0.5);
+
+      // Label
+      svg.append('text')
+        .attr('x', 8).attr('y', ty + 3)
+        .attr('font-size', 9).attr('fill', '#8b8fa3')
+        .text(`${task.milestone_id} ${task.name.substring(0,22)}`);
+
+      // Bar
+      const barColor = statusColors[task.status] || '#888';
+      const barX = x(task._start);
+      const barW = Math.max(4, x(task._end) - barX);
+
+      if (task.priority === 'Critical') {
+        // Diamond for milestone
+        svg.append('path')
+          .attr('d', `M${barX},${ty} L${barX+6},${ty-6} L${barX+12},${ty} L${barX+6},${ty+6} Z`)
+          .attr('fill', barColor).attr('opacity', 0.9);
+      } else {
+        svg.append('rect')
+          .attr('x', barX).attr('y', ty - 5)
+          .attr('width', barW).attr('height', 10)
+          .attr('rx', 2).attr('fill', barColor).attr('opacity', 0.75);
+      }
+
+      // Revised date marker
+      if (task._revised) {
+        svg.append('line')
+          .attr('x1', x(task._revised)).attr('x2', x(task._revised))
+          .attr('y1', ty-7).attr('y2', ty+7)
+          .attr('stroke', '#F59E0B').attr('stroke-width', 2);
+      }
+
+      yPos += rowH;
+    });
+  });
+
+  // Dependencies
+  if (showDeps) {
+    edgesData.forEach(e => {
+      const src = taskPositions.get(e.predecessor_id);
+      const tgt = taskPositions.get(e.successor_id);
+      if (src && tgt) {
+        const x1 = src.x2 + 2, y1 = src.y;
+        const x2 = tgt.x1 - 2, y2 = tgt.y;
+        const mx = (x1 + x2) / 2;
+        svg.append('path')
+          .attr('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`)
+          .attr('fill', 'none')
+          .attr('stroke', e.cross_functional ? '#5b8dee' : '#4a4e68')
+          .attr('stroke-width', 0.8)
+          .attr('stroke-dasharray', e.cross_functional ? '3,2' : 'none')
+          .attr('opacity', 0.4)
+          .attr('marker-end', 'url(#arrow)');
+      }
+    });
+  }
+}
+
+document.getElementById('gantt-group').addEventListener('change', renderGantt);
+document.getElementById('gantt-deps').addEventListener('change', renderGantt);
+
+// ===================== EXPORT =====================
+function exportSVG() {
+  const svgEl = document.querySelector('.view.active svg');
+  if (!svgEl) return;
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  // Add background
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%');
+  bg.setAttribute('fill', '#0f1117');
+  clone.insertBefore(bg, clone.firstChild);
+  // Inline styles
+  clone.querySelectorAll('text').forEach(t => {
+    t.style.fontFamily = 'system-ui, sans-serif';
+    if (!t.getAttribute('fill')) t.setAttribute('fill', '#e2e4ec');
+  });
+  const blob = new Blob([new XMLSerializer().serializeToString(clone)], {type:'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'pmi-dependency-graph.svg'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportPNG() {
+  const svgEl = document.querySelector('.view.active svg');
+  if (!svgEl) return;
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%'); bg.setAttribute('height', '100%');
+  bg.setAttribute('fill', '#0f1117');
+  clone.insertBefore(bg, clone.firstChild);
+  clone.querySelectorAll('text').forEach(t => {
+    t.style.fontFamily = 'system-ui, sans-serif';
+  });
+  const svgData = new XMLSerializer().serializeToString(clone);
+  const canvas = document.createElement('canvas');
+  const rect = svgEl.getBoundingClientRect();
+  canvas.width = rect.width * 2; canvas.height = rect.height * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  const img = new Image();
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'pmi-dependency-graph.png'; a.click();
+  };
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+}
+
+// ===================== INIT =====================
+initGraph();
+</script>
+</body>
+</html>
