@@ -730,6 +730,14 @@
         }
         
         .chevron {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             transition: transform 0.2s;
         }
         
@@ -1520,7 +1528,7 @@ Only include categories that have items. If no items for a category, omit it ent
                                 <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); rejectCategory('${category}')">
                                     ✗ Reject All
                                 </button>
-                                <span class="chevron">▼</span>
+                                <button class="chevron" aria-expanded="true" aria-controls="category-${category}" aria-label="Toggle ${catInfo.title} category" onclick="event.stopPropagation(); toggleCategory('${category}')">▼</button>
                             </div>
                         </div>
                         <div class="category-content expanded" id="category-${category}">
@@ -1801,8 +1809,9 @@ Only include categories that have items. If no items for a category, omit it ent
             const header = content.previousElementSibling;
             const chevron = header.querySelector('.chevron');
             
-            content.classList.toggle('expanded');
+            const isExpanded = content.classList.toggle('expanded');
             chevron.classList.toggle('rotated');
+            chevron.setAttribute('aria-expanded', isExpanded);
         }
         
         function approveCategory(category) {
