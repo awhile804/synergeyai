@@ -1,0 +1,6 @@
+## 2026-04-12 - Add ARIA labels to dynamically generated remove buttons
+**Learning:** In dynamically generated forms (like the Project Builder), icon-only action buttons (e.g., '×' for remove) often miss accessibility attributes because they are constructed via JavaScript template strings. This breaks screen reader accessibility and lacks visual tooltip context for pointer users.
+**Action:** When auditing forms that dynamically add rows or fields, specifically inspect the JavaScript string literals responsible for DOM generation to ensure  and  attributes are injected consistently with static HTML instances.
+## 2026-04-12 - Add ARIA labels to dynamically generated remove buttons
+**Learning:** In dynamically generated forms (like the Project Builder), icon-only action buttons (e.g., '×' for remove) often miss accessibility attributes because they are constructed via JavaScript template strings. This breaks screen reader accessibility and lacks visual tooltip context for pointer users.
+**Action:** When auditing forms that dynamically add rows or fields, specifically inspect the JavaScript string literals responsible for DOM generation to ensure aria-label and title attributes are injected consistently with static HTML instances.
