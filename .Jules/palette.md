@@ -1,0 +1,3 @@
+## 2024-04-13 - [Accessibility of Expandable List Items]
+**Learning:** When creating clickable list items or cards that expand, adding `aria-expanded` and `role="button"` directly to the wrapper element (like a header div) often creates a poor screen reader experience and violates WCAG if there are other interactive elements inside it.
+**Action:** The accessible pattern is to keep the wrapper clickable for pointer users (large click target) but add a dedicated inner `<button>` with `aria-expanded`, `aria-controls`, and `aria-label`. Then attach `onclick="event.stopPropagation(); toggleFunc()"` to this button so it handles keyboard/screen reader focus correctly without triggering the wrapper's event twice.
