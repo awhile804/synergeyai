@@ -1,0 +1,3 @@
+## 2026-04-14 - [Accordion Accessibility]
+**Learning:** Added ARIA expanded and controls attributes to disclosure widgets. Important constraint: for dynamic lists where elements toggle individually, the JS function must target specific elements or selectively modify all similar elements rather than using a blanket toggle class. Also, using `event.stopPropagation()` is crucial when the button is inside a container that also handles click events.
+**Action:** Ensure disclosure widgets have `aria-expanded` and `aria-controls`. Use `event.stopPropagation()` on the nested toggle button when inside another clickable container.
