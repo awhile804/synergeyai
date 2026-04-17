@@ -1,0 +1,3 @@
+## 2026-04-17 - Expand Button ARIA within Clickable Wrappers
+**Learning:** When adding `aria-expanded` to expand/collapse buttons that are nested inside clickable wrapper headers, setting `aria-expanded` on the button itself (instead of the wrapper) is correct for keyboard accessibility. However, it's critical to add `event.stopPropagation()` to the button's `onclick` handler. Without it, clicking the button triggers its own toggle logic and then bubbles up to the wrapper's toggle logic, causing a double-fire that instantly re-collapses the content and invalidates the ARIA state.
+**Action:** Always check for overlapping/bubbling click handlers when adding ARIA attributes to nested interactive elements.
