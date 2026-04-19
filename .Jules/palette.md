@@ -1,0 +1,3 @@
+## 2026-04-19 - Accessible Detail Expanders in Nested Clickable Areas
+**Learning:** Adding ARIA attributes (e.g., `aria-expanded`, `aria-controls`) correctly to nested elements inside clickable wrappers can be tricky. Previously, expanding details via button inside a clickable div could cause duplicated events or ambiguous target announcements. Placing the ARIA states directly on the explicit toggle button rather than the wrapper prevents semantic errors.
+**Action:** Use `event.stopPropagation()` on nested toggles alongside explicit ARIA associations (`aria-expanded`/`aria-controls`) to ensure native screen reader/keyboard controls remain specific without breaking wrapper UI behaviors.
