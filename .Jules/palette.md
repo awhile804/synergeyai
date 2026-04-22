@@ -1,0 +1,3 @@
+## 2024-11-09 - Icon-only buttons lacking ARIA labels and titles across dynamic views
+**Learning:** Found a systemic pattern where icon-only buttons (e.g., "×", "▼", "✓", "✎", "✗") generated inside dynamic template strings (e.g. `renderTable`, `renderSprintDetailTasks`, `renderSuggestions`) were consistently missing `aria-label`s for screen readers and `title`s for visual hover tooltips. When UI elements are generated via string literals in JS, accessibility attributes are frequently overlooked compared to static HTML.
+**Action:** When reviewing dynamic rendering functions (e.g., using `.map().join('')`), proactively check that any interactive icon-only elements include both `aria-label` and `title` attributes.
