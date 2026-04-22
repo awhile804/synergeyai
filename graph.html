@@ -1072,7 +1072,7 @@ function showDetailPanel(d) {
   const statusCol = statusColors[d.status] || '#888';
   const wsCol = wsColors[d.function] || '#888';
 
-  let html = `<h3>${d.milestone_id} <button class="detail-close" onclick="closeDetailPanel()">✕</button></h3>
+  let html = `<h3>${d.milestone_id} <button class="detail-close" onclick="closeDetailPanel()" aria-label="Close detail panel" title="Close">✕</button></h3>
     <div style="font-size:13px;font-weight:500;margin-bottom:12px;line-height:1.4;">${d.name}</div>
     <div class="detail-field"><div class="label">Workstream</div><div class="value"><span class="detail-badge" style="background:${wsCol}22;color:${wsCol}">${d.function}</span></div></div>
     <div class="detail-field"><div class="label">Owner</div><div class="value">${d.owner || '—'}</div></div>
