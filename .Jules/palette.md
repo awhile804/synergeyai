@@ -1,0 +1,3 @@
+## 2024-05-18 - Add `aria-expanded` and `aria-controls` to toggle buttons
+**Learning:** Adding accessibility attributes `aria-expanded` and `aria-controls` to dynamically rendered toggle buttons helps screen reader users understand the current state and structure of collapsible content sections (e.g. detailed view in sprint planner, categories in transcript analyzer, user story details in user story planner).
+**Action:** When implementing collapsible content, remember to apply `aria-expanded` reflecting the state, and `aria-controls` linking the toggle element to the actual collapsible content block. When a div wrappers act as a toggle, try to wrap the text or chevron in an inner `<button>` with ARIA attributes to preserve the outer styling while ensuring semantics.
