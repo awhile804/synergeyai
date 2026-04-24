@@ -1,0 +1,3 @@
+## 2026-04-24 - Adding aria-labels to dynamically generated buttons
+**Learning:** When injecting mocked data into global scope (e.g. `window.suggestions`) via Playwright's `page.evaluate()` to test dynamically generated UI components, the mocked object must precisely match the schema expected by the render functions. Missing fields (like a `data` object with a `title`, or a valid `category` string) will cause runtime `TypeError` exceptions and break the test execution.
+**Action:** Always inspect the actual rendering functions (e.g., `renderSuggestionCard`) to determine the exact data structure required for mock objects before writing Playwright tests that rely on `page.evaluate()`.
