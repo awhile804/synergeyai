@@ -1,0 +1,3 @@
+## 2026-05-04 - Password Visibility Toggle UX
+**Learning:** Password visibility toggle buttons need state sync with their input type. Using `this` in inline `onclick` handlers provides a clean way to update button text (`Show`/`Hide`) without extra DOM lookups. Modal state persistence can compromise UX/privacy if not handled; inputs must be reset to hidden (`type="password"`) when reopening modals.
+**Action:** When creating token/password toggles, pass `this` to update the button text, ensure `type="button"` is set to prevent form submission, and implement modal initialization logic to reset sensitive inputs to their secure state.
