@@ -1,0 +1,3 @@
+## 2024-05-18 - Dynamically Generated Icon-Only Buttons
+**Learning:** Icon-only buttons rendered dynamically via JavaScript template literals (such as table row removal buttons or card action icons) are easily overlooked for accessibility. Without `aria-label` and `title` attributes, these buttons are inaccessible to screen readers and lack visual hover tooltips for other users, degrading the overall UX.
+**Action:** When dynamically generating UI elements containing icon-only action buttons, always explicitly include both `aria-label` and `title` attributes within the template literal to ensure consistent accessibility and visual feedback.
