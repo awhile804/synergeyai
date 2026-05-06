@@ -1,0 +1,3 @@
+## 2024-05-18 - Nested ARIA buttons for keyboard accessibility
+**Learning:** For collapsible content with a large clickable wrapper (e.g. for pointer users), placing an ARIA-enabled nested `<button>` ensures that screen reader and keyboard-only users can correctly interface with the content. We also use `event.stopPropagation()` on the nested button to avoid triggering both click events simultaneously.
+**Action:** Always add `<button>` tags with `aria-expanded`, `aria-controls`, `aria-label`, and `title` to inner click targets, and programmatically toggle the `aria-expanded` as the wrapper state changes.
