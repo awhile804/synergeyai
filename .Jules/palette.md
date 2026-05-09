@@ -1,0 +1,3 @@
+## 2024-05-24 - Expand/Collapse Accessibility Pattern
+**Learning:** Wrapper `div` elements used as large click targets for expanding/collapsing content violate WCAG when they contain native `<button>` elements and lack proper roles. Simply adding `role="button"` to the wrapper is invalid HTML if it contains a button.
+**Action:** Keep the `onclick` on the wrapper for pointer users, but place the ARIA state attributes (`aria-expanded`, `aria-controls`, `aria-label`, `title`) and an `onclick` with `event.stopPropagation()` on the inner button. Update the inner button's `aria-expanded` dynamically in JavaScript.
