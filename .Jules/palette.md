@@ -1,0 +1,3 @@
+## 2025-02-13 - Add ARIA Labels and Titles to Dynamic Icon Buttons
+**Learning:** When generating UI elements dynamically via JavaScript template strings (like table rows in `project-builder.html`), it's crucial to explicitly include both `aria-label` and `title` attributes for icon-only action buttons. Without them, screen readers fail to convey the button's purpose and visual users lose helpful tooltips.
+**Action:** Ensure all dynamically generated UI components with icon-only buttons adhere to accessibility standards by explicitly embedding `aria-label` and `title` in their template literals.
