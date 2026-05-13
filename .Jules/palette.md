@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - Adding accessibility attributes to template literal UI elements
+**Learning:** Dynamically generated UI elements created via JavaScript template strings (e.g., suggestion actions in `transcript-analyzer.html`) must explicitly include both `aria-label` and `title` attributes for icon-only action buttons to ensure screen reader compatibility and visual hover tooltips.
+**Action:** When adding or modifying inline HTML template literals that produce buttons, always ensure that `aria-label` and `title` attributes are included, particularly if the button content is an icon or a symbol instead of text.
