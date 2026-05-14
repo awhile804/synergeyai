@@ -1739,7 +1739,7 @@
                                 <button class="action-btn edit" aria-label="Edit story ${story.Story_ID}" onclick="openEditStoryModal('${story.Story_ID}')" title="Edit">✎</button>
                                 <button class="action-btn complete" aria-label="Mark story ${story.Story_ID} complete" onclick="markStoryComplete('${story.Story_ID}')" title="Mark Complete" ${isCompleted ? 'disabled' : ''}>✓</button>
                                 <button class="action-btn delete" aria-label="Delete story ${story.Story_ID}" onclick="deleteStory('${story.Story_ID}')" title="Delete">✕</button>
-                                <button class="action-btn details" onclick="toggleExpand(${index})">Details</button>
+                                <button id="details-btn-${index}" class="action-btn details" aria-expanded="false" aria-controls="expanded-${index}" onclick="toggleExpand(${index})">Details</button>
                             </div>
                         </td>
                     </tr>
@@ -1875,9 +1875,14 @@
             document.querySelectorAll('.expanded-content').forEach(el => el.classList.remove('show'));
             document.querySelectorAll('.stories-table tr').forEach(el => el.classList.remove('expanded'));
             
+            // Reset aria-expanded on all details buttons
+            document.querySelectorAll('.action-btn.details').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
+
             if (!isShowing) {
                 expandedRow.classList.add('show');
                 mainRow.classList.add('expanded');
+                const detailsBtn = document.getElementById(`details-btn-${index}`);
+                if (detailsBtn) detailsBtn.setAttribute('aria-expanded', 'true');
             }
         }
 
