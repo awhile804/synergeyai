@@ -1,0 +1,3 @@
+## 2026-05-16 - Adding ARIA labels and titles to icon-only buttons
+**Learning:** In dynamically generated UI, such as template literals used for table rows (`project-builder.html`) or suggestion cards (`transcript-analyzer.html`), icon-only buttons (like `×`, `✓`, `✎`) are frequently missing both accessible names and visual tooltips. Adding `aria-label` alongside `title` addresses both screen reader and visual pointer user needs without requiring layout or styling changes.
+**Action:** When inspecting or adding icon-only action buttons inside template literals, ensure both `aria-label` and `title` attributes are included directly in the template definition to guarantee accessibility from the moment the element is injected into the DOM.
