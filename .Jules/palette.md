@@ -1,0 +1,3 @@
+## 2026-05-17 - ARIA Attributes on Clickable Wrapper Toggle Buttons
+**Learning:** When a toggle button is placed inside a wrapper element that also has an `onclick` handler, it's critical to add `event.stopPropagation()` to the button's click handler. Otherwise, the click event bubbles up to the wrapper, causing the toggle function to fire twice and effectively do nothing. This is especially important when retrofitting accessibility attributes (like `aria-expanded`) onto existing UI components.
+**Action:** Always check for parent `onclick` handlers when adding or modifying toggle buttons, and use `event.stopPropagation()` on the inner button to ensure reliable keyboard and screen reader interaction.
