@@ -1,0 +1,3 @@
+## 2024-05-15 - Password Visibility Toggles
+**Learning:** Token/password visibility toggle buttons that lack dynamic text updates (e.g. staying on 'Show' when the password is shown) cause user confusion, and leaving input states visible when modals close compromises privacy. Not setting `type="button"` on modal buttons triggers unwanted form-like behaviors.
+**Action:** When creating password visibility toggle buttons, ensure the button receives the `this` context to dynamically swap text ('Show'/'Hide'), always specify `type="button"`, and verify that the modal's open function explicitly resets both the input type and button text back to their hidden defaults.
