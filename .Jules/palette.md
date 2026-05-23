@@ -1,0 +1,3 @@
+## 2024-03-20 - Add ARIA Labels and Titles to Icon-Only Buttons
+**Learning:** Icon-only action buttons generated via JavaScript template strings in `transcript-analyzer.html` lacked accessibility features, making them inaccessible to screen readers and difficult to understand for visual users.
+**Action:** Always add `aria-label` for screen reader accessibility and a matching `title` attribute for native hover tooltips when dynamically generating icon-only buttons.
