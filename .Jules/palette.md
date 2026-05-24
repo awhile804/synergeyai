@@ -1,0 +1,3 @@
+## 2024-05-19 - Adding Tooltips to Icon-Only Buttons Generated Dynamically
+**Learning:** When making micro-UX accessibility improvements to dynamic template literals (e.g. JS-generated tables/lists), icon-only buttons often lack both `aria-label`s and `title` attributes, resulting in a poor experience for screen-readers and visual hover users alike. Adding these via `str_replace` or `sed` can make a large impact with minimal lines of code.
+**Action:** Always search the codebase for `class="...-btn"` or `class="btn ..."` inside JS template literals, not just static HTML blocks, to ensure dynamic elements are equally accessible.
