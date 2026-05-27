@@ -1,0 +1,3 @@
+## 2024-05-18 - Accessibility on Icon-Only Buttons in Dynamic Content
+**Learning:** Dynamically generated UI elements created via JavaScript template strings (e.g., form rows in `project-builder.html`, suggestion actions in `transcript-analyzer.html`) that use icon-only action buttons are completely opaque to screen readers if they lack `aria-label` attributes. Furthermore, without a `title` attribute, visual users miss out on native hover tooltips which are crucial for understanding the button's action.
+**Action:** Always explicitly include both `aria-label` (for screen readers) and `title` (for visual hover tooltips) on all icon-only buttons, especially those injected into the DOM dynamically.
