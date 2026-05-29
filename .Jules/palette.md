@@ -1,0 +1,3 @@
+## 2024-05-15 - ARIA Labels for Dynamic Icon Buttons
+**Learning:** Dynamically generated UI elements created via JavaScript template strings (e.g. suggestion actions in transcript-analyzer.html) frequently lack proper ARIA labels and titles because they are embedded deep within inline logic rather than standard HTML templates.
+**Action:** When auditing files for accessibility, specifically search for icon-only characters (like ✓, ✎, ✗) within JavaScript template literals, as these are easy to miss during static HTML reviews. Always include both `aria-label` for screen readers and `title` for visual hover tooltips on these elements.
