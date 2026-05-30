@@ -1739,7 +1739,7 @@
                                 <button class="action-btn edit" aria-label="Edit story ${story.Story_ID}" onclick="openEditStoryModal('${story.Story_ID}')" title="Edit">✎</button>
                                 <button class="action-btn complete" aria-label="Mark story ${story.Story_ID} complete" onclick="markStoryComplete('${story.Story_ID}')" title="Mark Complete" ${isCompleted ? 'disabled' : ''}>✓</button>
                                 <button class="action-btn delete" aria-label="Delete story ${story.Story_ID}" onclick="deleteStory('${story.Story_ID}')" title="Delete">✕</button>
-                                <button class="action-btn details" onclick="toggleExpand(${index})">Details</button>
+                                <button class="action-btn details" onclick="toggleExpand(${index}, this)" aria-expanded="false" aria-controls="expanded-${index}">Details</button>
                             </div>
                         </td>
                     </tr>
@@ -1866,7 +1866,7 @@
         }
 
         // Toggle expanded row
-        function toggleExpand(index) {
+        function toggleExpand(index, buttonEl) {
             const expandedRow = document.getElementById(`expanded-${index}`);
             const mainRow = document.getElementById(`row-${index}`);
             const isShowing = expandedRow.classList.contains('show');
@@ -1874,10 +1874,15 @@
             // Close all other expanded rows
             document.querySelectorAll('.expanded-content').forEach(el => el.classList.remove('show'));
             document.querySelectorAll('.stories-table tr').forEach(el => el.classList.remove('expanded'));
+            // Reset all aria-expanded attributes
+            document.querySelectorAll('.action-btn.details').forEach(btn => btn.setAttribute('aria-expanded', 'false'));
             
             if (!isShowing) {
                 expandedRow.classList.add('show');
                 mainRow.classList.add('expanded');
+                if (buttonEl) {
+                    buttonEl.setAttribute('aria-expanded', 'true');
+                }
             }
         }
 
