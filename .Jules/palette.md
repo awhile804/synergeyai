@@ -1,0 +1,3 @@
+## 2024-05-18 - Improve Password Visibility Toggle UX
+**Learning:** Password and token visibility toggle buttons must dynamically update their text between 'Show' and 'Hide' based on the input state. Passing the button element (`this`) via the inline `onclick` handler facilitates this without extra DOM lookups. Additionally, setting `type="button"` prevents accidental form submissions, and ensuring the input state is reset to hidden when reopening modals maintains privacy and a consistent experience.
+**Action:** Always verify password visibility toggles implement dynamic text updates, explicitly define `type="button"`, use `this` context for DOM reference, and have a reset mechanism when enclosed within modals or re-rendered components.
