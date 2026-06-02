@@ -1,0 +1,3 @@
+## 2024-05-24 - Expandable Table Rows and Accordions
+**Learning:** UX/Accessibility pattern: Expandable table rows or accordions must include the `aria-expanded` attribute on the toggle button, dynamically updated via JavaScript based on their state, and use `aria-controls` linked to the expanded content's ID to ensure proper screen reader compatibility.
+**Action:** When creating or modifying expandable UI components, always ensure the toggle button includes `aria-expanded` and `aria-controls` attributes, and that JavaScript updates the `aria-expanded` state appropriately when expanding or collapsing content.
