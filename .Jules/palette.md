@@ -1,0 +1,3 @@
+## 2026-06-03 - Dynamic ARIA State Management for Accordions
+**Learning:** Expandable table rows or accordions must include the `aria-expanded` attribute on the toggle button, dynamically updated via JavaScript based on their state, and use `aria-controls` linked to the expanded content's ID to ensure proper screen reader compatibility. A static ARIA state is insufficient for interactive components.
+**Action:** Always ensure JavaScript functions that toggle visibility (e.g., `toggleTaskExpand`) also update the `aria-expanded`, `aria-label`, and `title` attributes of the corresponding toggle button to match the new visual state.
