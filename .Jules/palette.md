@@ -1,0 +1,3 @@
+## 2024-06-07 - Add accessibility properties to dynamic row deletion buttons
+**Learning:** Icon-only buttons used to remove rows in complex table layouts (like project builders) are frequently missed during accessibility checks. Simply adding a visible multiplication symbol '×' is not parsed by screen readers. Furthermore, these buttons are often generated dynamically using JavaScript string templates, meaning both static HTML and JS logic need updates to maintain accessibility.
+**Action:** When auditing forms with dynamically added rows, always ensure `aria-label` and `title` attributes are injected in the template literals that generate the rows, providing both screen reader support and visible tooltips for mouse users.
