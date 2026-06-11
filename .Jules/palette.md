@@ -1,0 +1,3 @@
+## 2024-06-25 - Icon-only buttons in Javascript template strings
+**Learning:** In applications rendering UI via JavaScript template strings (like `renderSuggestionCard`), dynamically generated icon-only action buttons are easily missed by static accessibility checkers. Even when rendering small, repeating UI components like suggestion cards, screen reader compatibility and visual tooltips are crucial.
+**Action:** Always ensure that icon-only action buttons (`✓`, `✎`, `✗`) dynamically generated via template strings include both `aria-label` (for screen readers) and `title` (for native hover tooltips for visual users) to guarantee an accessible and intuitive user experience.
