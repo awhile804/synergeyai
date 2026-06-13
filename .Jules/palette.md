@@ -1,0 +1,3 @@
+## 2024-05-14 - [Adding aria-labels to dynamically generated icon-only buttons]
+**Learning:** Icon-only action buttons (e.g., approve/reject/edit ticks and crosses, remove row icons) generated via JavaScript template strings lack native accessibility properties, rendering them invisible or confusing to screen readers and visual users alike when they lack titles.
+**Action:** Always include both `aria-label` (for screen readers) and `title` (for native visual hover tooltips) attributes explicitly when constructing icon-only buttons within JavaScript template literals. For expandable rows or accordions, ensure the toggle button receives dynamic `aria-expanded` attributes.

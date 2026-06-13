@@ -1618,7 +1618,7 @@
                                     <span>${task.Status || 'Not Started'}</span>
                                 </div>
                             </div>
-                            <button class="detail-task-expand" id="expand-btn-${globalIndex}">▼</button>
+                            <button class="detail-task-expand" id="expand-btn-${globalIndex}" aria-label="Expand task details" aria-expanded="false" title="Expand task details">▼</button>
                         </div>
                         <div class="detail-task-body" id="task-body-${globalIndex}">
                             <div class="detail-form-grid">
@@ -1668,10 +1668,14 @@
             document.querySelectorAll('.detail-task-card.expanded').forEach(el => el.classList.remove('expanded'));
             document.querySelectorAll('.detail-task-expand.expanded').forEach(el => el.classList.remove('expanded'));
 
+            // Ensure all buttons reflect collapsed state after clearing classes
+            document.querySelectorAll('.detail-task-expand').forEach(el => el.setAttribute('aria-expanded', 'false'));
+
             if (!isExpanded) {
                 body.classList.add('show');
                 card.classList.add('expanded');
                 btn.classList.add('expanded');
+                btn.setAttribute('aria-expanded', 'true');
             }
         }
 
