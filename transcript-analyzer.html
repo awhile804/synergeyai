@@ -1507,20 +1507,22 @@ Only include categories that have items. If no items for a category, omit it ent
                 
                 html += `
                     <div class="category-section" data-category="${category}">
-                        <div class="category-header" onclick="toggleCategory('${category}')">
+                        <div class="category-header">
                             <div class="category-title">
                                 <span>${catInfo.icon}</span>
                                 <h3>${catInfo.title}</h3>
                                 <span class="category-badge">${items.length}</span>
                             </div>
                             <div class="category-actions">
-                                <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); approveCategory('${category}')">
+                                <button class="btn btn-success btn-sm" onclick="approveCategory('${category}')">
                                     ✓ Approve All (${pendingCount})
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); rejectCategory('${category}')">
+                                <button class="btn btn-danger btn-sm" onclick="rejectCategory('${category}')">
                                     ✗ Reject All
                                 </button>
-                                <span class="chevron">▼</span>
+                                <button class="category-toggle-btn" aria-expanded="true" aria-controls="category-${category}" onclick="toggleCategory('${category}')" aria-label="Toggle ${catInfo.title} category" style="background: none; border: none; cursor: pointer; color: var(--text);">
+                                    <span class="chevron" style="display: inline-block;">▼</span>
+                                </button>
                             </div>
                         </div>
                         <div class="category-content expanded" id="category-${category}">
@@ -1799,10 +1801,12 @@ Only include categories that have items. If no items for a category, omit it ent
         function toggleCategory(category) {
             const content = document.getElementById(`category-${category}`);
             const header = content.previousElementSibling;
+            const toggleBtn = header.querySelector('.category-toggle-btn');
             const chevron = header.querySelector('.chevron');
             
-            content.classList.toggle('expanded');
-            chevron.classList.toggle('rotated');
+            const isExpanded = content.classList.toggle('expanded');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', isExpanded.toString());
+            if (chevron) chevron.classList.toggle('rotated');
         }
         
         function approveCategory(category) {
