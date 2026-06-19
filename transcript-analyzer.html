@@ -1588,15 +1588,15 @@ Only include categories that have items. If no items for a category, omit it ent
                         </div>
                         <div class="suggestion-actions">
                             ${status === 'pending' ? `
-                                <button class="btn btn-success btn-sm" onclick="approveSuggestion(${id})">✓</button>
-                                <button class="btn btn-secondary btn-sm" onclick="editSuggestion(${id})">✎</button>
-                                <button class="btn btn-danger btn-sm" onclick="rejectSuggestion(${id})">✗</button>
+                                <button class="btn btn-success btn-sm" aria-label="Approve suggestion" title="Approve" onclick="approveSuggestion(${id})">✓</button>
+                                <button class="btn btn-secondary btn-sm" aria-label="Edit suggestion" title="Edit" onclick="editSuggestion(${id})">✎</button>
+                                <button class="btn btn-danger btn-sm" aria-label="Reject suggestion" title="Reject" onclick="rejectSuggestion(${id})">✗</button>
                             ` : status === 'approved' ? `
                                 <span style="color: var(--success);">✓ Approved</span>
-                                <button class="btn btn-secondary btn-sm" onclick="resetSuggestion(${id})">Undo</button>
+                                <button class="btn btn-secondary btn-sm" aria-label="Undo approve" title="Undo" onclick="resetSuggestion(${id})">Undo</button>
                             ` : `
                                 <span style="color: var(--danger);">✗ Rejected</span>
-                                <button class="btn btn-secondary btn-sm" onclick="resetSuggestion(${id})">Undo</button>
+                                <button class="btn btn-secondary btn-sm" aria-label="Undo reject" title="Undo" onclick="resetSuggestion(${id})">Undo</button>
                             `}
                         </div>
                     </div>
