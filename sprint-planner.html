@@ -1608,7 +1608,7 @@
 
                 return `
                     <div class="detail-task-card" id="task-card-${globalIndex}">
-                        <div class="detail-task-header" onclick="toggleTaskExpand(${globalIndex})">
+                        <div class="detail-task-header" role="button" tabindex="0" aria-expanded="false" aria-controls="task-body-${globalIndex}" onclick="toggleTaskExpand(${globalIndex})" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleTaskExpand(${globalIndex}); }">
                             <div class="detail-task-status ${statusClass}"></div>
                             <div class="detail-task-info">
                                 <div class="detail-task-name">${escapeHtml(task.Description)}</div>
@@ -1667,11 +1667,14 @@
             document.querySelectorAll('.detail-task-body.show').forEach(el => el.classList.remove('show'));
             document.querySelectorAll('.detail-task-card.expanded').forEach(el => el.classList.remove('expanded'));
             document.querySelectorAll('.detail-task-expand.expanded').forEach(el => el.classList.remove('expanded'));
+            document.querySelectorAll('.detail-task-header[aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
 
             if (!isExpanded) {
                 body.classList.add('show');
                 card.classList.add('expanded');
                 btn.classList.add('expanded');
+                const header = document.querySelector(`#task-card-${index} .detail-task-header`);
+                if (header) header.setAttribute('aria-expanded', 'true');
             }
         }
 
