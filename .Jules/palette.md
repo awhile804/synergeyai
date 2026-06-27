@@ -1,0 +1,3 @@
+## 2026-06-27 - [Add ARIA labels to template literal icon buttons]
+**Learning:** Dynamically generated UI elements created via JavaScript template strings (like suggestion actions in `transcript-analyzer.html`) often miss accessibility attributes because they aren't standard HTML elements in the DOM yet. Icon-only action buttons MUST explicitly include both `aria-label` (for screen readers) and `title` (for visual hover tooltips) attributes to ensure full compatibility.
+**Action:** When adding or updating dynamically generated icon-only buttons via JavaScript, always explicitly add `aria-label` and `title` attributes.
