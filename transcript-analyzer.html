@@ -1588,9 +1588,9 @@ Only include categories that have items. If no items for a category, omit it ent
                         </div>
                         <div class="suggestion-actions">
                             ${status === 'pending' ? `
-                                <button class="btn btn-success btn-sm" onclick="approveSuggestion(${id})">✓</button>
-                                <button class="btn btn-secondary btn-sm" onclick="editSuggestion(${id})">✎</button>
-                                <button class="btn btn-danger btn-sm" onclick="rejectSuggestion(${id})">✗</button>
+                                <button class="btn btn-success btn-sm" aria-label="Approve" title="Approve" onclick="approveSuggestion(${id})">✓</button>
+                                <button class="btn btn-secondary btn-sm" aria-label="Edit" title="Edit" onclick="editSuggestion(${id})">✎</button>
+                                <button class="btn btn-danger btn-sm" aria-label="Reject" title="Reject" onclick="rejectSuggestion(${id})">✗</button>
                             ` : status === 'approved' ? `
                                 <span style="color: var(--success);">✓ Approved</span>
                                 <button class="btn btn-secondary btn-sm" onclick="resetSuggestion(${id})">Undo</button>
