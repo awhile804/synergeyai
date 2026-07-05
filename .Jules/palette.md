@@ -1,0 +1,3 @@
+## 2024-07-05 - Password Visibility Toggle State Management
+**Learning:** Password visibility toggle buttons need to explicitly set `type="button"` to prevent unintended form submissions. Furthermore, it is crucial to pass `this` to the onclick handler (e.g., `toggleVisibility(this)`) to reliably toggle the button text between "Show" and "Hide" without extra DOM lookups. Additionally, when reopening modals containing password fields, the input type should be reset to `password` and the button text back to "Show" to maintain user privacy and a consistent experience.
+**Action:** Always add `type="button"` to visibility toggles, pass `this` for state updates, and explicitly reset visibility state when re-initializing or reopening UI components containing sensitive inputs.
