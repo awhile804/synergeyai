@@ -1,0 +1,3 @@
+## 2024-06-12 - [Consistent Password Toggle State]
+**Learning:** Password and token visibility toggles in modals can leak sensitive information if their visibility state is not reset when the modal is reopened. Also, using `event.target` for the toggle button can be brittle, passing `this` explicitly ensures the button text ('Show'/'Hide') updates correctly.
+**Action:** When implementing password toggles in modals, ensure the input state is explicitly reset to 'password' and the button text to 'Show' in the modal open function. Use `type="button"` to prevent form submission and pass `this` for robust state updates.
