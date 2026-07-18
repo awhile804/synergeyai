@@ -1301,7 +1301,7 @@
                     <label>GitHub Personal Access Token</label>
                     <div style="display: flex; gap: 0.5rem;">
                         <input type="password" id="settingsGitHubToken" placeholder="ghp_xxxxxxxxxxxx" style="flex: 1;">
-                        <button class="btn btn-cancel" onclick="toggleGitHubTokenVisibility()" style="padding: 0.5rem 1rem;">Show</button>
+                        <button type="button" class="btn btn-cancel" id="githubTokenToggleBtn" onclick="toggleGitHubTokenVisibility(this)" style="padding: 0.5rem 1rem;">Show</button>
                     </div>
                     <small style="color: var(--text-muted); font-size: 0.8rem;">
                         Create one at <a href="https://github.com/settings/tokens" target="_blank" style="color: var(--accent);">github.com/settings/tokens</a> with 'repo' scope
@@ -1329,7 +1329,7 @@
                     <label>OpenAI API Key</label>
                     <div style="display: flex; gap: 0.5rem;">
                         <input type="password" id="settingsOpenAIKey" placeholder="sk-..." style="flex: 1;">
-                        <button class="btn btn-cancel" onclick="toggleOpenAIKeyVisibility()" style="padding: 0.5rem 1rem;">Show</button>
+                        <button type="button" class="btn btn-cancel" id="openaiKeyToggleBtn" onclick="toggleOpenAIKeyVisibility(this)" style="padding: 0.5rem 1rem;">Show</button>
                     </div>
                     <small style="color: var(--text-muted); font-size: 0.8rem;">
                         Get one at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: var(--accent);">platform.openai.com</a>
@@ -2251,6 +2251,16 @@
             }
             
             document.getElementById('githubTestResult').innerHTML = '';
+
+            // Reset token visibility
+            document.getElementById('settingsGitHubToken').type = 'password';
+            const ghBtn = document.getElementById('githubTokenToggleBtn');
+            if (ghBtn) ghBtn.textContent = 'Show';
+
+            document.getElementById('settingsOpenAIKey').type = 'password';
+            const aiBtn = document.getElementById('openaiKeyToggleBtn');
+            if (aiBtn) aiBtn.textContent = 'Show';
+
             document.getElementById('projectSettingsModal').classList.add('visible');
         }
         
@@ -2258,14 +2268,18 @@
             document.getElementById('projectSettingsModal').classList.remove('visible');
         }
         
-        function toggleGitHubTokenVisibility() {
+        function toggleGitHubTokenVisibility(btn) {
             const input = document.getElementById('settingsGitHubToken');
-            input.type = input.type === 'password' ? 'text' : 'password';
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btn.textContent = isPassword ? 'Hide' : 'Show';
         }
         
-        function toggleOpenAIKeyVisibility() {
+        function toggleOpenAIKeyVisibility(btn) {
             const input = document.getElementById('settingsOpenAIKey');
-            input.type = input.type === 'password' ? 'text' : 'password';
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btn.textContent = isPassword ? 'Hide' : 'Show';
         }
         
         async function testGitHubConnection() {
