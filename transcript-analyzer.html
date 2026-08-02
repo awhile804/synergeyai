@@ -842,7 +842,7 @@
             <h3>🔑 OpenAI API Key</h3>
             <div class="api-key-row">
                 <input type="password" id="apiKeyInput" placeholder="sk-..." oninput="validateApiKey()">
-                <button class="btn btn-secondary btn-sm" onclick="toggleApiKeyVisibility()">Show</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleApiKeyVisibility(this)">Show</button>
                 <span id="apiKeyStatus" class="api-key-status"></span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem;">
@@ -1177,9 +1177,9 @@ Example format:
             updateAnalyzeButton();
         }
         
-        function toggleApiKeyVisibility() {
+        function toggleApiKeyVisibility(btn) {
             const input = document.getElementById('apiKeyInput');
-            const btn = event.target;
+            btn = btn || event.target;
             if (input.type === 'password') {
                 input.type = 'text';
                 btn.textContent = 'Hide';
